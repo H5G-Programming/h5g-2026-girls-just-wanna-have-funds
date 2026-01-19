@@ -24,7 +24,7 @@ python --version
 brew install nvm
 mkdir -p ~/.nvm
 export NVM_DIR=\"$HOME/.nvm\"
-source \"$(brew --prefix nvm)/nvm.sh\"
+source $(brew --prefix nvm)/nvm.sh
 
 # Install and use Node 18
 nvm install 18
@@ -35,10 +35,10 @@ node --version
 ## Backend (Flask)
 ```bash
 cd backend
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python app.py
+python3 app.py
 ```
 
 The backend should be available at:
