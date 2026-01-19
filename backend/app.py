@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -247,4 +248,5 @@ def get_summary():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", "5001"))
+    app.run(debug=True, port=port)
