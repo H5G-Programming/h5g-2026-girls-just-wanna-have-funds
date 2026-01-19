@@ -1,0 +1,250 @@
+from datetime import datetime, timedelta
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+# In-memory data for a single demo user.
+user = {"id": 1, "name": "Maya"}
+
+# Simple counters to keep IDs readable for beginners.
+next_goal_id = 4
+next_transaction_id = 1
+
+
+goals = [
+    {
+        "id": 1,
+        "title": "New sneakers",
+        "target_amount": 200,
+        "saved_amount": 124,
+        "emoji": "\ud83d\udc5f",
+        "image_url": "",
+        "status": "active",
+    },
+    {
+        "id": 2,
+        "title": "Art set",
+        "target_amount": 80,
+        "saved_amount": 32,
+        "emoji": "\ud83c\udfa8",
+        "image_url": "",
+        "status": "active",
+    },
+    {
+        "id": 3,
+        "title": "Concert ticket",
+        "target_amount": 120,
+        "saved_amount": 95,
+        "emoji": "\ud83c\udfb6",
+        "image_url": "",
+        "status": "active",
+    },
+]
+
+transactions = []
+
+
+def _new_transaction_id():
+    global next_transaction_id
+    transaction_id = next_transaction_id
+    next_transaction_id += 1
+    return transaction_id
+
+
+def _add_transaction(goal_id, transaction_type, amount, note="", date_override=None):
+    created_at = date_override or datetime.utcnow().isoformat() + "Z"
+    transaction = {
+        "id": _new_transaction_id(),
+        "goal_id": goal_id,
+        "type": transaction_type,
+        "amount": amount,
+        "date": created_at,
+        "note": note,
+    }
+    transactions.append(transaction)
+    return transaction
+
+
+def _find_goal(goal_id):
+    return next((goal for goal in goals if goal["id"] == goal_id), None)
+
+
+def _seed_transactions():
+    today = datetime.utcnow()
+    sample_transactions = [
+        (1, "deposit", 20, "Babysitting", today - timedelta(days=8)),
+        (1, "deposit", 15, "Allowance", today - timedelta(days=25)),
+        (2, "deposit", 10, "Gift", today - timedelta(days=40)),
+        (2, "deposit", 12, "Snack savings", today - timedelta(days=65)),
+        (3, "deposit", 18, "Chores", today - timedelta(days=12)),
+        (3, "deposit", 22, "Weekly save", today - timedelta(days=72)),
+    ]
+
+    for goal_id, tx_type, amount, note, date_value in sample_transactions:
+        _add_transaction(
+            goal_id,
+            tx_type,
+            amount,
+            note=note,
+            date_override=date_value.isoformat() + "Z",
+        )
+
+
+_seed_transactions()
+
+
+@app.get("/api/user")
+def get_user():
+    return jsonify(user)
+
+
+@app.get("/api/goals")
+def get_goals():
+    return jsonify(goals)
+
+
+@app.post("/api/goals")
+def create_goal():
+    global next_goal_id
+    data = request.get_json(force=True)
+    title = data.get("title", "").strip()
+    target_amount = float(data.get("target_amount", 0))
+    emoji = data.get("emoji", "\ud83d\udc9c")
+    image_url = data.get("image_url", "")
+
+    if not title or target_amount <= 0:
+        return jsonify({"error": "Title and target amount are required."}), 400
+
+    new_goal = {
+        "id": next_goal_id,
+        "title": title,
+        "target_amount": target_amount,
+        "saved_amount": 0,
+        "emoji": emoji,
+        "image_url": image_url,
+        "status": "active",
+    }
+    next_goal_id += 1
+    goals.append(new_goal)
+    return jsonify(new_goal), 201
+
+
+@app.post("/api/goals/<int:goal_id>/add-funds")
+def add_funds(goal_id):
+    data = request.get_json(force=True)
+    amount = float(data.get("amount", 0))
+    note = data.get("note", "")
+
+    goal = _find_goal(goal_id)
+    if not goal:
+        return jsonify({"error": "Goal not found."}), 404
+    if amount < 0:
+        return jsonify({"error": "Amount must be greater than or equal to 0."}), 400
+
+    goal["saved_amount"] += amount
+    _add_transaction(goal_id, "deposit", amount, note=note)
+    return jsonify(goal)
+
+
+@app.post("/api/goals/<int:goal_id>/move-funds")
+def move_funds(goal_id):
+    data = request.get_json(force=True)
+    amount = float(data.get("amount", 0))
+    target_goal_id = int(data.get("target_goal_id", 0))
+
+    source_goal = _find_goal(goal_id)
+    target_goal = _find_goal(target_goal_id)
+
+    if not source_goal or not target_goal:
+        return jsonify({"error": "Goal not found."}), 404
+    if amount <= 0:
+        return jsonify({"error": "Amount must be greater than 0."}), 400
+    if source_goal["saved_amount"] < amount:
+        return jsonify({"error": "Not enough funds to move."}), 400
+
+    source_goal["saved_amount"] -= amount
+    target_goal["saved_amount"] += amount
+
+    _add_transaction(source_goal["id"], "transfer_out", amount, note="Moved to another goal")
+    _add_transaction(target_goal["id"], "transfer_in", amount, note="Received from another goal")
+
+    return jsonify({"source": source_goal, "target": target_goal})
+
+
+@app.post("/api/goals/<int:goal_id>/close")
+def close_goal(goal_id):
+    data = request.get_json(force=True)
+    target_goal_id = int(data.get("target_goal_id", 0))
+
+    goal_to_be_closed = _find_goal(goal_id)
+    target_goal = _find_goal(target_goal_id)
+
+    if not goal_to_be_closed or not target_goal:
+        return jsonify({"error": "Goal not found."}), 404
+
+    amount = goal_to_be_closed["saved_amount"]
+    if amount > 0:
+        goal_to_be_closed["saved_amount"] = 0
+        target_goal["saved_amount"] += amount
+        _add_transaction(goal_to_be_closed["id"], "transfer_out", amount, note="Closed goal")
+        _add_transaction(target_goal["id"], "transfer_in", amount, note="From closed goal")
+
+    goal_to_be_closed["status"] = "closed"
+    return jsonify({"source": goal_to_be_closed, "target": target_goal})
+
+
+@app.post("/api/goals/<int:goal_id>/complete")
+def complete_goal(goal_id):
+    goal = _find_goal(goal_id)
+    if not goal:
+        return jsonify({"error": "Goal not found."}), 404
+
+    goal["status"] = "archived"
+    _add_transaction(goal_id, "complete", 0, note="Goal completed")
+    return jsonify(goal)
+
+
+@app.get("/api/transactions")
+def get_transactions():
+    sorted_transactions = sorted(transactions, key=lambda item: item["date"], reverse=True)
+    return jsonify(sorted_transactions)
+
+
+@app.get("/api/summary")
+def get_summary():
+    active_goals = [goal for goal in goals if goal["status"] == "active"]
+    total_saved = sum(goal["saved_amount"] for goal in active_goals)
+
+    closest_goal = None
+    if active_goals:
+        closest_goal = max(
+            active_goals,
+            key=lambda goal: goal["saved_amount"] / goal["target_amount"],
+        )
+
+    month_totals = {}
+    for transaction in transactions:
+        month = transaction["date"][0:7] # 'why is there 7 characters?' -> 'YYYY-MM'
+        if month not in month_totals:
+            month_totals[month] = {"month": month, "in": 0, "out": 0}
+
+        if transaction["type"] in ("deposit", "transfer_in"):
+            month_totals[month]["in"] += transaction["amount"]
+        elif transaction["type"] in ("transfer_out", "complete"):
+            month_totals[month]["out"] += transaction["amount"]
+
+    sorted_months = sorted(month_totals.values(), key=lambda item: item["month"])
+
+    return jsonify(
+        {
+            "total_saved": total_saved,
+            "closest_goal": closest_goal,
+            "monthly_activity": sorted_months,
+        }
+    )
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

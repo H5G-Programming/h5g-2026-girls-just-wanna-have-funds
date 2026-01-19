@@ -1,0 +1,426 @@
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&family=Nunito:wght@400;600;700&display=swap");
+
+:root {
+  --purple-900: #2f195f;
+  --purple-700: #5e3bce;
+  --pink-500: #ff7bd5;
+  --peach-400: #ffa84f;
+  --sky-300: #7bd7ff;
+  --cream-100: #fff6e9;
+  --white: #ffffff;
+  --shadow: 0 18px 40px rgba(47, 25, 95, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Baloo 2", "Nunito", "Trebuchet MS", sans-serif;
+  background: radial-gradient(circle at top left, #ffe9fb 0%, #fff8e9 40%, #fef0ff 100%);
+  color: #2c244d;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 240px 1fr 280px;
+  min-height: 100vh;
+  gap: 24px;
+  padding: 24px;
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #6a45e7 0%, #3f2ea6 100%);
+  color: var(--white);
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.sidebar::after {
+  content: "";
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  top: -60px;
+  right: -60px;
+}
+
+.logo {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.logo-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+
+.logo-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.logo-sub {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.balance-card {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.balance-card p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.balance-card h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu-item {
+  border: none;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.menu-item.active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sidebar-tip {
+  background: rgba(255, 255, 255, 0.18);
+  padding: 14px;
+  border-radius: 16px;
+  font-size: 13px;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 6px 0;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.header p {
+  margin: 4px 0 0;
+  color: #6f5a9c;
+}
+
+.header-chip {
+  background: #fff1fb;
+  padding: 10px 16px;
+  border-radius: 999px;
+  color: #ff5abf;
+  font-weight: 600;
+}
+
+.error {
+  background: #ffe3ef;
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: #b92f6a;
+}
+
+.card {
+  background: var(--white);
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.card.highlight {
+  background: linear-gradient(135deg, #ffe5ff, #fff4e3);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 20px;
+}
+
+.goal-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.goal-emoji {
+  font-size: 28px;
+}
+
+.progress {
+  background: #f1ecff;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--pink-500), var(--peach-400));
+}
+
+.chart-wrap {
+  height: 240px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.goal-form {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.6fr 1fr auto;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.goal-form input,
+.goal-form button,
+.goal-form select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #eadffd;
+  font-family: inherit;
+}
+
+.goal-form button.primary {
+  background: var(--purple-700);
+  color: var(--white);
+  border: none;
+  cursor: pointer;
+}
+
+.goal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.goal-card {
+  background: #fff9f0;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.goal-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: #ffe6f5;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  overflow: hidden;
+}
+
+.goal-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.goal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+}
+
+.action-row input,
+.action-row select {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #f0dfff;
+  font-family: inherit;
+}
+
+.action-row button {
+  border: none;
+  background: #f7d8ff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.goal-actions .primary {
+  border: none;
+  padding: 10px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #ff7bd5, #ffb057);
+  color: #2b133b;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.goal-archive {
+  font-weight: 600;
+  color: #7a6b9b;
+}
+
+.tab-group {
+  display: flex;
+  gap: 8px;
+  background: #f4eaff;
+  padding: 6px;
+  border-radius: 999px;
+}
+
+.tab {
+  border: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tab.active {
+  background: #ffffff;
+  box-shadow: 0 6px 12px rgba(94, 59, 206, 0.12);
+}
+
+.activity {
+  background: var(--white);
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff4fd;
+  padding: 12px;
+  border-radius: 14px;
+}
+
+.activity-type {
+  margin: 0;
+  font-weight: 600;
+}
+
+.activity-note {
+  font-size: 12px;
+  color: #7a6b9b;
+}
+
+.activity-amount {
+  font-weight: 700;
+  color: #4c2a85;
+}
+
+@media (max-width: 1100px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar,
+  .activity {
+    order: -1;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .goal-form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .app {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .goal-form {
+    grid-template-columns: 1fr;
+  }
+
+  .action-row {
+    grid-template-columns: 1fr;
+  }
+}
