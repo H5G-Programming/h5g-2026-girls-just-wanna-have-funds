@@ -1,4 +1,4 @@
-# Project Plan: Teen Savings Coach
+# Project Plan: Girls Just Wanna Have Funds
 
 ## Goals
 - Build a Vite + React frontend tailored for girls age 13-16 with lively colors, icons, and friendly copy.
