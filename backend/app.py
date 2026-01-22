@@ -6,14 +6,14 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# In-memory data for a single demo user.
+# In-memory data for a single demo user
 user = {"id": 1, "name": "Maya"}
 
-# Simple counters to keep IDs readable for beginners.
+# Simple counters to keep IDs readable
 next_goal_id = 4
 next_transaction_id = 1
 
-
+# List of savings goals each contained in {} to have more attributes and split by ,
 goals = [
     {
         "id": 1,
@@ -44,17 +44,18 @@ goals = [
     },
 ]
 
+# Empty list of transactions
 transactions = []
 
-
+# to decalre a function you have to use keyword 'def' followed by name and parentheses
 def _new_transaction_id():
-    global next_transaction_id
+    global next_transaction_id # Henviser til den globale variabel, så vi kan ændre den. Udne global havde vi labet en lokal kopi og ændret den
     transaction_id = next_transaction_id
-    next_transaction_id += 1
+    next_transaction_id += 1 # skal vi lave en mere læsbar inkrementering med enten ++ eller next_transaction_id + 1?
     return transaction_id
 
-
-def _add_transaction(goal_id, transaction_type, amount, note="", date_override=None):
+# function with arguments, because to add transaction you have to inform the computer of certain details
+def _add_transaction(goal_id, transaction_type, amount, note="", date_override=None): #hvad sker der med note og override?
     created_at = date_override or datetime.utcnow().isoformat() + "Z"
     transaction = {
         "id": _new_transaction_id(),
@@ -64,14 +65,19 @@ def _add_transaction(goal_id, transaction_type, amount, note="", date_override=N
         "date": created_at,
         "note": note,
     }
-    transactions.append(transaction)
+    transactions.append(transaction) # append is a function that adds an item to the end of a list
     return transaction
 
 
 def _find_goal(goal_id):
+    # next is a function used to return the first matching item. If none is found it returns None
+    # First 'goal' is the value we return if there is a match
+    # Second 'goal' is the current item in the iteration
+    # goals is the list of goals we iterate over
+    # if is followed by a condition (always either true or false)
     return next((goal for goal in goals if goal["id"] == goal_id), None)
 
-
+# Seed some initial transactions for demo purposes
 def _seed_transactions():
     today = datetime.utcnow()
     sample_transactions = [
@@ -82,7 +88,7 @@ def _seed_transactions():
         (3, "deposit", 18, "Chores", today - timedelta(days=12)),
         (3, "deposit", 22, "Weekly save", today - timedelta(days=72)),
     ]
-
+# Loop through the sample transactions and add them to the transactions list
     for goal_id, tx_type, amount, note, date_value in sample_transactions:
         _add_transaction(
             goal_id,
@@ -98,6 +104,7 @@ _seed_transactions()
 
 @app.get("/api/user")
 def get_user():
+    # Returns the demo user data as JSON to follow API convensions
     return jsonify(user)
 
 
@@ -110,12 +117,13 @@ def get_goals():
 def create_goal():
     global next_goal_id
     data = request.get_json(force=True)
-    title = data.get("title", "").strip()
-    target_amount = float(data.get("target_amount", 0))
+    title = data.get("title", "").strip() # strip() fjerner whitespace fra starten og slutningen af strengen
+    target_amount = float(data.get("target_amount", 0)) #.get() gives default value 0 if target_amount is not found
     emoji = data.get("emoji", "\ud83d\udc9c")
     image_url = data.get("image_url", "")
 
     if not title or target_amount <= 0:
+        # Not possible to create goal without title or with non-positive target amount
         return jsonify({"error": "Title and target amount are required."}), 400
 
     new_goal = {
@@ -144,6 +152,7 @@ def add_funds(goal_id):
     if amount < 0:
         return jsonify({"error": "Amount must be greater than or equal to 0."}), 400
 
+    # Add the funds to the goal's saved amount. [] is used to access the specific key in the dictionary
     goal["saved_amount"] += amount
     _add_transaction(goal_id, "deposit", amount, note=note)
     return jsonify(goal)
