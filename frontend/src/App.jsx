@@ -12,7 +12,11 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
-const formatMoney = (value) => `$${value.toFixed(2)}`;
+const formatMoney = (value) =>
+  `${new Intl.NumberFormat("da-DK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)} kr.`;
 
 const postJson = async (url, body) => {
   const response = await fetch(`${API_BASE}${url}`, {
@@ -47,7 +51,7 @@ export default function App() {
   const [newGoal, setNewGoal] = useState({
     title: "",
     target_amount: "",
-    emoji: "\ud83d\udc96",
+    emoji: "💖",
     image_url: "",
   });
   const [fundInputs, setFundInputs] = useState({});
@@ -123,7 +127,7 @@ export default function App() {
         ...newGoal,
         target_amount: Number(newGoal.target_amount),
       });
-      setNewGoal({ title: "", target_amount: "", emoji: "\ud83d\udc96", image_url: "" });
+      setNewGoal({ title: "", target_amount: "", emoji: "💖", image_url: "" });
       refreshAll();
     } catch (err) {
       setError(err.message);
@@ -186,15 +190,15 @@ export default function App() {
     <div className="app">
       <aside className="sidebar">
         <div className="logo">
-          <div className="logo-badge">\ud83c\udf1f</div>
+          <div className="logo-badge">🌟</div>
           <div>
-            <p className="logo-title">Savings Squad</p>
-            <p className="logo-sub">Girl power money goals</p>
+            <p className="logo-title">Priority Bank</p>
+            <p className="logo-sub">Make every kr. match your priorities</p>
           </div>
         </div>
         <div className="balance-card">
-          <p>Total Savings</p>
-          <h2>{summary ? formatMoney(summary.total_saved) : "$0.00"}</h2>
+          <p>Total Priority Savings</p>
+          <h2>{summary ? formatMoney(summary.total_saved) : "kr. 0.00"}</h2>
         </div>
         <nav className="menu">
           <button type="button" className="menu-item active">
@@ -208,25 +212,28 @@ export default function App() {
           </button>
         </nav>
         <div className="sidebar-tip">
-          <p>\ud83d\udca1 Tip of the day</p>
-          <span>Small saves add up fast. Try the $1-a-day challenge!</span>
+          <p>💡 Tip of the day</p>
+          <span>
+            Talk money with friends—sharing priorities makes it easier to choose
+            the goals you want to back on purpose.
+          </span>
         </div>
       </aside>
 
       <main className="main">
         <header className="header">
           <div>
-            <h1>Hey {user ? user.name : "friend"}!</h1>
-            <p>Your money goals are looking bright today.</p>
+            <h1>Priority check-in, {user ? user.name : "friend"}.</h1>
+            <p>Every kr. has a job—line up the ones that matter most.</p>
           </div>
-          <div className="header-chip">\ud83d\udeb4\u200d\u2640\ufe0f Keep going!</div>
+          <div className="header-chip">🚴‍♀️ Priority mode</div>
         </header>
 
         {error ? <div className="error">{error}</div> : null}
 
         <section className="dashboard-grid">
           <div className="card highlight">
-            <h3>Closest Goal</h3>
+            <h3>Top Priority Goal</h3>
             {summary?.closest_goal ? (
               <>
                 <div className="goal-row">
@@ -260,13 +267,20 @@ export default function App() {
           </div>
 
           <div className="card">
-            <h3>Monthly Activity</h3>
+            <h3>Monthly Priority Pulse</h3>
             <div className="chart-wrap">
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={summary?.monthly_activity || []}>
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip
+                    cursor={{ fill: "rgba(47, 25, 95, 0.08)" }}
+                    contentStyle={{
+                      background: "rgba(255, 255, 255, 0.92)",
+                      borderRadius: "12px",
+                      border: "1px solid #efe6ff",
+                    }}
+                  />
                   <Legend />
                   <Bar dataKey="in" fill="#ff7bd5" name="Money in" radius={[6, 6, 0, 0]} />
                   <Bar dataKey="out" fill="#ffa84f" name="Money out" radius={[6, 6, 0, 0]} />
@@ -279,8 +293,8 @@ export default function App() {
         <section className="card">
           <div className="section-header">
             <div>
-              <h2>My Goals</h2>
-              <p>Track progress, move funds, and celebrate wins.</p>
+              <h2>Priority Goals</h2>
+              <p>Choose what matters, fund it, and celebrate momentum.</p>
             </div>
             <div className="tab-group">
               <button
@@ -480,7 +494,7 @@ export default function App() {
       </main>
 
       <aside className="activity">
-        <h3>Recent Activity</h3>
+        <h3>Priority Moves</h3>
         <div className="activity-list">
           {transactions.map((transaction) => (
             <div key={transaction.id} className="activity-item">

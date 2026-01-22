@@ -17,7 +17,8 @@
 
 body {
   margin: 0;
-  font-family: "Baloo 2", "Nunito", "Trebuchet MS", sans-serif;
+  font-family: "Baloo 2", "Nunito", "Trebuchet MS", "Apple Color Emoji",
+    "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
   background: radial-gradient(circle at top left, #ffe9fb 0%, #fff8e9 40%, #fef0ff 100%);
   color: #2c244d;
 }
@@ -43,17 +44,6 @@ body {
   box-shadow: var(--shadow);
 }
 
-.sidebar::after {
-  content: "";
-  position: absolute;
-  width: 180px;
-  height: 180px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  top: -60px;
-  right: -60px;
-}
-
 .logo {
   display: flex;
   gap: 12px;
@@ -70,6 +60,7 @@ body {
   display: grid;
   place-items: center;
   font-size: 22px;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
 }
 
 .logo-title {
@@ -192,6 +183,7 @@ body {
 
 .goal-emoji {
   font-size: 28px;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
 }
 
 .progress {
@@ -272,6 +264,10 @@ body {
   place-items: center;
   font-size: 22px;
   overflow: hidden;
+}
+
+.goal-avatar span {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
 }
 
 .goal-avatar img {
