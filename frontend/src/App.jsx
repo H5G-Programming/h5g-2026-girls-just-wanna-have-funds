@@ -63,9 +63,9 @@ export default function App() {
   const celebratedGoals = useRef(new Set());
   const hasLoaded = useRef(false);
   const tips = [
-    "Make it social. A quick chat about priorities helps you pick one goal to fund this week.",
-    "Name the why. Goals with a clear reason are easier to protect in your budget.",
     "Try a weekly micro-deposit. Small, steady moves keep priorities on track.",
+    "Have you tried a no buy challenge? You choose the rules but it is a great way to check your spending on things you don't value.",
+    "Make it social. A quick chat with friends about financial priorities sets you up for success and you get support each other.",
   ];
 
   const activeGoals = useMemo(
@@ -207,11 +207,11 @@ export default function App() {
           <div className="logo-badge">🌟</div>
           <div>
             <p className="logo-title">Priority Bank</p>
-            <p className="logo-sub">Make every kr. match your priorities</p>
+            <p className="logo-sub">Make every earning match your priorities</p>
           </div>
         </div>
         <div className="balance-card">
-          <p>Total Priority Savings</p>
+          <p>Total Savings</p>
           <h2>{summary ? formatMoney(summary.total_saved) : "kr. 0.00"}</h2>
         </div>
         <nav className="menu">
@@ -242,10 +242,10 @@ export default function App() {
       <main className="main">
         <header className="header">
           <div>
-            <h1>Priority check-in, {user ? user.name : "friend"}.</h1>
-            <p>Every kr. has a job—line up the ones that matter most.</p>
+            <h1>Hi there, {user ? user.name : "friend"}</h1>
+            <p>Let's check in with your goals</p>
           </div>
-          <div className="header-chip">🚴‍♀️ Priority mode</div>
+          <div className="header-chip">🚴‍♀️ On track to reach your goals</div>
         </header>
 
         {error ? <div className="error">{error}</div> : null}
@@ -253,7 +253,7 @@ export default function App() {
         {activeView === "dashboard" ? (
           <section className="dashboard-grid">
             <div className="card highlight">
-              <h3>Top Priority Goal</h3>
+              <h3>Closest Goal</h3>
               {summary?.closest_goal ? (
                 <>
                   <div className="goal-row">
@@ -300,7 +300,7 @@ export default function App() {
             </div>
 
             <div className="card">
-              <h3>Monthly Priority Pulse</h3>
+              <h3>Activity Log</h3>
               <div className="chart-wrap">
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={summary?.monthly_activity || []}>
@@ -353,7 +353,7 @@ export default function App() {
           <section className="card">
             <div className="section-header">
               <div>
-                <h2>Priority Goals</h2>
+                <h2>Goals</h2>
                 <p>Choose what matters, fund it, and celebrate momentum.</p>
               </div>
               <div className="tab-group">
@@ -643,7 +643,7 @@ export default function App() {
       </main>
 
       <aside className="activity">
-        <h3>Priority Moves</h3>
+        <h3>Transactions</h3>
         <div className="activity-list">
           {transactions.map((transaction) => (
             <div key={transaction.id} className="activity-item">

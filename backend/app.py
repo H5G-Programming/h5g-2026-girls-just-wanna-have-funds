@@ -49,13 +49,13 @@ transactions = []
 
 # to decalre a function you have to use keyword 'def' followed by name and parentheses
 def _new_transaction_id():
-    global next_transaction_id # Henviser til den globale variabel, så vi kan ændre den. Udne global havde vi labet en lokal kopi og ændret den
+    global next_transaction_id # Refers to the globale variable and enables us t change it instead of creating a new local one and changing that instead
     transaction_id = next_transaction_id
-    next_transaction_id += 1 # skal vi lave en mere læsbar inkrementering med enten ++ eller next_transaction_id + 1?
+    next_transaction_id = next_transaction_id + 1
     return transaction_id
 
 # function with arguments, because to add transaction you have to inform the computer of certain details
-def _add_transaction(goal_id, transaction_type, amount, note="", date_override=None): #hvad sker der med note og override?
+def _add_transaction(goal_id, transaction_type, amount, note="", date_override=None): #note and date_override provides default values if not provided
     created_at = date_override or datetime.utcnow().isoformat() + "Z"
     transaction = {
         "id": _new_transaction_id(),
@@ -72,9 +72,9 @@ def _add_transaction(goal_id, transaction_type, amount, note="", date_override=N
 def _find_goal(goal_id):
     # next is a function used to return the first matching item. If none is found it returns None
     # First 'goal' is the value we return if there is a match
-    # Second 'goal' is the current item in the iteration
+    # Second 'goal' is the current item in the iteration - essentially the same as the first one but they serve different purposes
     # goals is the list of goals we iterate over
-    # if is followed by a condition (always either true or false)
+    # 'if' is followed by a condition (always either true or false)
     return next((goal for goal in goals if goal["id"] == goal_id), None)
 
 # Seed some initial transactions for demo purposes
@@ -104,7 +104,7 @@ _seed_transactions()
 
 @app.get("/api/user")
 def get_user():
-    # Returns the demo user data as JSON to follow API convensions
+    # Returns the demo user data as JSON to follow API convensions (basically enables communication between frontend and backend)
     return jsonify(user)
 
 
@@ -117,7 +117,7 @@ def get_goals():
 def create_goal():
     global next_goal_id
     data = request.get_json(force=True)
-    title = data.get("title", "").strip() # strip() fjerner whitespace fra starten og slutningen af strengen
+    title = data.get("title", "").strip() # strip() removes whitespace from the beginning and end of the string
     target_amount = float(data.get("target_amount", 0)) #.get() gives default value 0 if target_amount is not found
     emoji = data.get("emoji", "\ud83d\udc9c")
     image_url = data.get("image_url", "")
@@ -135,7 +135,7 @@ def create_goal():
         "image_url": image_url,
         "status": "active",
     }
-    next_goal_id += 1
+    next_goal_id = next_goal_id + 1
     goals.append(new_goal)
     return jsonify(new_goal), 201
 
@@ -153,7 +153,7 @@ def add_funds(goal_id):
         return jsonify({"error": "Amount must be greater than or equal to 0."}), 400
 
     # Add the funds to the goal's saved amount. [] is used to access the specific key in the dictionary
-    goal["saved_amount"] += amount
+    goal["saved_amount"] = goal["saved_amount"] + amount
     _add_transaction(goal_id, "deposit", amount, note=note)
     return jsonify(goal)
 
@@ -164,9 +164,10 @@ def move_funds(goal_id):
     amount = float(data.get("amount", 0))
     target_goal_id = int(data.get("target_goal_id", 0))
 
-    source_goal = _find_goal(goal_id)
-    target_goal = _find_goal(target_goal_id)
+    source_goal = _find_goal(goal_id) #the goal we are moving funds from
+    target_goal = _find_goal(target_goal_id) #the goal we are moving funds to
 
+    # Error handling if the user tries to do something invalid
     if not source_goal or not target_goal:
         return jsonify({"error": "Goal not found."}), 404
     if amount <= 0:
@@ -174,9 +175,11 @@ def move_funds(goal_id):
     if source_goal["saved_amount"] < amount:
         return jsonify({"error": "Not enough funds to move."}), 400
 
-    source_goal["saved_amount"] -= amount
-    target_goal["saved_amount"] += amount
+    # Move the funds between the goals
+    source_goal["saved_amount"] = source_goal["saved_amount"] - amount
+    target_goal["saved_amount"] = target_goal["saved_amount"] + amount
 
+    # Record the transactions for both goals (adds to the transactions list)
     _add_transaction(source_goal["id"], "transfer_out", amount, note="Moved to another goal")
     _add_transaction(target_goal["id"], "transfer_in", amount, note="Received from another goal")
 
@@ -188,8 +191,8 @@ def close_goal(goal_id):
     data = request.get_json(force=True)
     target_goal_id = int(data.get("target_goal_id", 0))
 
-    goal_to_be_closed = _find_goal(goal_id)
-    target_goal = _find_goal(target_goal_id)
+    goal_to_be_closed = _find_goal(goal_id) 
+    target_goal = _find_goal(target_goal_id) #the goal we are moving funds to
 
     if not goal_to_be_closed or not target_goal:
         return jsonify({"error": "Goal not found."}), 404
@@ -197,7 +200,7 @@ def close_goal(goal_id):
     amount = goal_to_be_closed["saved_amount"]
     if amount > 0:
         goal_to_be_closed["saved_amount"] = 0
-        target_goal["saved_amount"] += amount
+        target_goal["saved_amount"] = target_goal["saved_amount"] + amount
         _add_transaction(goal_to_be_closed["id"], "transfer_out", amount, note="Closed goal")
         _add_transaction(target_goal["id"], "transfer_in", amount, note="From closed goal")
 
@@ -218,6 +221,7 @@ def complete_goal(goal_id):
 
 @app.get("/api/transactions")
 def get_transactions():
+    #sorted is a keyword that sorts a list based on a key provided, here we sort by date in descending order
     sorted_transactions = sorted(transactions, key=lambda item: item["date"], reverse=True)
     return jsonify(sorted_transactions)
 
@@ -236,14 +240,14 @@ def get_summary():
 
     month_totals = {}
     for transaction in transactions:
-        month = transaction["date"][0:7] # 'why is there 7 characters?' -> 'YYYY-MM'
+        month = transaction["date"][0:7] # There are 7 characters because the format is:'YYYY-MM'
         if month not in month_totals:
             month_totals[month] = {"month": month, "in": 0, "out": 0}
 
         if transaction["type"] in ("deposit", "transfer_in"):
-            month_totals[month]["in"] += transaction["amount"]
+            month_totals[month]["in"] = month_totals[month]["in"] + transaction["amount"]
         elif transaction["type"] in ("transfer_out", "complete"):
-            month_totals[month]["out"] += transaction["amount"]
+            month_totals[month]["out"] = month_totals[month]["out"] + transaction["amount"]
 
     sorted_months = sorted(month_totals.values(), key=lambda item: item["month"])
 
