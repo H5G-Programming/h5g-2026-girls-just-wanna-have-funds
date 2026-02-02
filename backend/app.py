@@ -122,10 +122,7 @@ def create_goal():
     emoji = data.get("emoji", "\ud83d\udc9c")
     image_url = data.get("image_url", "")
 
-    if not title or target_amount <= 0:
-        # Not possible to create goal without title or with non-positive target amount
-        return jsonify({"error": "Title and target amount are required."}), 400
-
+    # TODO: Lesson 2 Exercise - Create a new goal dictionary with the provided data
     new_goal = {
         "id": next_goal_id,
         "title": title,
@@ -136,6 +133,8 @@ def create_goal():
         "status": "active",
     }
     next_goal_id = next_goal_id + 1
+    
+    # TODO: Lesson 2 Exercise - Add the new goal dictionary to the list of existing goals
     goals.append(new_goal)
     return jsonify(new_goal), 201
 
@@ -147,13 +146,11 @@ def add_funds(goal_id):
     note = data.get("note", "")
 
     goal = _find_goal(goal_id)
-    if not goal:
-        return jsonify({"error": "Goal not found."}), 404
-    if amount < 0:
-        return jsonify({"error": "Amount must be greater than or equal to 0."}), 400
 
     # Add the funds to the goal's saved amount. [] is used to access the specific key in the dictionary
+    # TODO: Lesson 2 Exercise - Complete the line below to add the amount to the saved_amount
     goal["saved_amount"] = goal["saved_amount"] + amount
+
     _add_transaction(goal_id, "deposit", amount, note=note)
     return jsonify(goal)
 
@@ -167,15 +164,7 @@ def move_funds(goal_id):
     source_goal = _find_goal(goal_id) #the goal we are moving funds from
     target_goal = _find_goal(target_goal_id) #the goal we are moving funds to
 
-    # Error handling if the user tries to do something invalid
-    if not source_goal or not target_goal:
-        return jsonify({"error": "Goal not found."}), 404
-    if amount <= 0:
-        return jsonify({"error": "Amount must be greater than 0."}), 400
-    if source_goal["saved_amount"] < amount:
-        return jsonify({"error": "Not enough funds to move."}), 400
-
-    # Move the funds between the goals
+    # TODO: Lesson 2 - Move the funds between the two goals
     source_goal["saved_amount"] = source_goal["saved_amount"] - amount
     target_goal["saved_amount"] = target_goal["saved_amount"] + amount
 
@@ -192,19 +181,25 @@ def close_goal(goal_id):
     target_goal_id = int(data.get("target_goal_id", 0))
 
     goal_to_be_closed = _find_goal(goal_id) 
-    target_goal = _find_goal(target_goal_id) #the goal we are moving funds to
+    target_goal = _find_goal(target_goal_id) #the goal we are moving the remaining funds to
 
-    if not goal_to_be_closed or not target_goal:
-        return jsonify({"error": "Goal not found."}), 404
-
+    # TODO - Lesson 2 - Get the saved amount from the goal to be closed
     amount = goal_to_be_closed["saved_amount"]
+
+    # TODO - Lesson 2 - If the amount is > 0,
+    # add the amount to the saved amount of the target goal
+    # and set the saved amount of the goal to be closed to 0
     if amount > 0:
         goal_to_be_closed["saved_amount"] = 0
         target_goal["saved_amount"] = target_goal["saved_amount"] + amount
-        _add_transaction(goal_to_be_closed["id"], "transfer_out", amount, note="Closed goal")
-        _add_transaction(target_goal["id"], "transfer_in", amount, note="From closed goal")
 
+    _add_transaction(goal_to_be_closed["id"], "transfer_out", amount, note="Closed goal")
+    _add_transaction(target_goal["id"], "transfer_in", amount, note="From closed goal")
+
+
+    # TODO - Lesson 2 - set the status of the goal to 'closed'
     goal_to_be_closed["status"] = "closed"
+
     return jsonify({"source": goal_to_be_closed, "target": target_goal})
 
 
