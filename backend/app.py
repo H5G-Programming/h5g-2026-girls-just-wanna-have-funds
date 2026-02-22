@@ -257,4 +257,5 @@ def get_summary():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5001"))
+    # Flask's debug=True automatically enables the auto-reloader — whenever a .py file is saved, Flask detects the change and restarts the server automatically. No need to stop and restart manually.   
     app.run(debug=True, port=port)
