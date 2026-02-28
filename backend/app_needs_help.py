@@ -80,15 +80,17 @@ def create_goal():
     # =============================================
     # EXERCISE 3: Create a new goal
     # =============================================
-    # YOUR CODE HERE
-    # Hint: Create a dictionary called new_goal with these keys:
-    #   id, title, target_amount, saved_amount, emoji, image_url, status
-    # saved_amount starts at 0. status should be "active". id should be next_goal_id.
+    new_goal = {
+        "id": next_goal_id,
+        "title": title,
+        # Add the remaining keys yourself:
+        # target_amount, saved_amount, emoji, image_url, status
+        # Hint: saved_amount starts at 0, status should be "active"
+    }
 
     next_goal_id = next_goal_id + 1
 
-    # YOUR CODE HERE
-    # Hint: Which list method adds an item to the end of the list?
+    # Add new_goal to the goals list below:
 
     return jsonify(new_goal), 201
 
@@ -104,9 +106,7 @@ def add_funds(goal_id):
     # EXERCISE 2: Add funds to a goal
     # =============================================
     # Add the funds to the goal's saved amount. [] is used to access a key in the dictionary.
-    # YOUR CODE HERE
-    # Hint: goal["saved_amount"] is the current amount saved.
-    #       How do you add `amount` to it?
+    goal["saved_amount"] = _____ + amount
 
     return jsonify(goal)
 
@@ -123,11 +123,12 @@ def move_funds(goal_id):
     # =============================================
     # EXERCISE 4: Move funds between goals
     # =============================================
-    # YOUR CODE HERE
     # Hint: You need TWO lines here.
-    #       Subtract amount from source_goal's saved_amount.
-    #       Add amount to target_goal's saved_amount.
-    #       (Think back to Exercise 2 — same idea, two goals this time.)
+    #   1. Subtract amount from source_goal's saved_amount.
+    #   2. Add amount to target_goal's saved_amount.
+    # (Think back to Exercise 2 — same idea, two goals this time.)
+    # Pattern: something["saved"] = something["saved"] - amount
+    # Now do it with source_goal and target_goal using "saved_amount":
 
     return jsonify({"source": source_goal, "target": target_goal})
 

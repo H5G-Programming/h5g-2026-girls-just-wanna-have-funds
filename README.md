@@ -1,6 +1,12 @@
-# h5g-2026-girls-just-wanna-have-funds
+# High5Girls - Go to Programming
+Together we'll learn to build our own website.
 
-* To get started read [GET_STARTED](GET_STARTED.md).
-* To run the code, follow the instructions in [RUNNING](RUNNING.md).
+## Start
+To run the program, go to terminal and run
+```bash
+bash start.sh
+```
+Open this link to see the website: [http://localhost:5173/](http://localhost:5173/)
 
-This repo is by @Naomi & @Sofie
+## Stop
+To stop it, click `CLTR + C`.
