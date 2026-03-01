@@ -6,10 +6,6 @@ CORS(app)
 
 # ---- Data ----
 
-# =============================================
-# EXERCISE 1: Change the user to have your own name
-# =============================================
-# Hint: Think back to exercise 5 from last week (lesson 1)
 user = {"id": 1, "name": "Maya"}
 
 next_goal_id = 4
@@ -78,7 +74,7 @@ def create_goal():
     image_url = data["image_url"]
 
     # =============================================
-    # EXERCISE 3: Create a new goal
+    # EXERCISE 2: Create a new goal
     # =============================================
     new_goal = {
         "id": next_goal_id,
@@ -103,7 +99,7 @@ def add_funds(goal_id):
     goal = find_goal(goal_id)
 
     # =============================================
-    # EXERCISE 2: Add funds to a goal
+    # EXERCISE 1: Add funds to a goal
     # =============================================
     # Add the funds to the goal's saved amount. [] is used to access a key in the dictionary.
     goal["saved_amount"] = _____ + amount
@@ -121,12 +117,12 @@ def move_funds(goal_id):
     target_goal = find_goal(target_goal_id)
 
     # =============================================
-    # EXERCISE 4: Move funds between goals
+    # EXERCISE 3: Move funds between goals
     # =============================================
     # Hint: You need TWO lines here.
     #   1. Subtract amount from source_goal's saved_amount.
     #   2. Add amount to target_goal's saved_amount.
-    # (Think back to Exercise 2 — same idea, two goals this time.)
+    # (Think back to Exercise 1 — same idea, two goals this time.)
     # Pattern: something["saved"] = something["saved"] - amount
     # Now do it with source_goal and target_goal using "saved_amount":
 
@@ -142,7 +138,7 @@ def close_goal(goal_id):
     target_goal = find_goal(target_goal_id)
 
     # =============================================
-    # EXERCISE 5: Close a goal
+    # EXERCISE 4: Close a goal
     # =============================================
 
     # YOUR CODE HERE  (1 of 3)

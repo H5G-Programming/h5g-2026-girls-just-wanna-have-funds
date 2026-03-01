@@ -6,7 +6,7 @@ echo ""
 echo "--- Starting Backend (Flask) on port 5001 ---"
 APP_FILE="${1:-app_needs_help.py}"
 cd backend
-python "$APP_FILE" &
+python3 "$APP_FILE" &
 BACKEND_PID=$!
 cd ..
 
