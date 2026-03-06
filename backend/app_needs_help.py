@@ -6,10 +6,6 @@ CORS(app)
 
 # ---- Data ----
 
-# =============================================
-# EXERCISE 1: Change the user to have your own name
-# =============================================
-# Hint: Think back to exercise 5 from last week (lesson 1)
 user = {"id": 1, "name": "Maya"}
 
 next_goal_id = 4
@@ -78,17 +74,19 @@ def create_goal():
     image_url = data["image_url"]
 
     # =============================================
-    # EXERCISE 3: Create a new goal
+    # EXERCISE 2: Create a new goal
     # =============================================
-    # YOUR CODE HERE
-    # Hint: Create a dictionary called new_goal with these keys:
-    #   id, title, target_amount, saved_amount, emoji, image_url, status
-    # saved_amount starts at 0. status should be "active". id should be next_goal_id.
+    new_goal = {
+        "id": next_goal_id,
+        "title": title,
+        # Add the remaining keys yourself:
+        # target_amount, saved_amount, emoji, image_url, status
+        # Hint: saved_amount starts at 0, status should be "active"
+    }
 
     next_goal_id = next_goal_id + 1
 
-    # YOUR CODE HERE
-    # Hint: Which list method adds an item to the end of the list?
+    # Add new_goal to the goals list below:
 
     return jsonify(new_goal), 201
 
@@ -101,12 +99,10 @@ def add_funds(goal_id):
     goal = find_goal(goal_id)
 
     # =============================================
-    # EXERCISE 2: Add funds to a goal
+    # EXERCISE 1: Add funds to a goal
     # =============================================
     # Add the funds to the goal's saved amount. [] is used to access a key in the dictionary.
-    # YOUR CODE HERE
-    # Hint: goal["saved_amount"] is the current amount saved.
-    #       How do you add `amount` to it?
+    goal["saved_amount"] = _____ + amount
 
     return jsonify(goal)
 
@@ -121,13 +117,14 @@ def move_funds(goal_id):
     target_goal = find_goal(target_goal_id)
 
     # =============================================
-    # EXERCISE 4: Move funds between goals
+    # EXERCISE 3: Move funds between goals
     # =============================================
-    # YOUR CODE HERE
     # Hint: You need TWO lines here.
-    #       Subtract amount from source_goal's saved_amount.
-    #       Add amount to target_goal's saved_amount.
-    #       (Think back to Exercise 2 — same idea, two goals this time.)
+    #   1. Subtract amount from source_goal's saved_amount.
+    #   2. Add amount to target_goal's saved_amount.
+    # (Think back to Exercise 1 — same idea, two goals this time.)
+    # Pattern: something["saved"] = something["saved"] - amount
+    # Now do it with source_goal and target_goal using "saved_amount":
 
     return jsonify({"source": source_goal, "target": target_goal})
 
@@ -141,7 +138,7 @@ def close_goal(goal_id):
     target_goal = find_goal(target_goal_id)
 
     # =============================================
-    # EXERCISE 5: Close a goal
+    # EXERCISE 4: Close a goal
     # =============================================
 
     # YOUR CODE HERE  (1 of 3)
@@ -163,34 +160,87 @@ def complete_goal(goal_id):
     goal["status"] = "archived"
     return jsonify(goal)
 
-
+##### The rest can be ignored. It just adds some activities to the log to make the website look nice.
 @app.get("/api/transactions")
 def get_transactions():
-    return jsonify(transactions)
+    sorted_transactions = sorted(transactions, key=lambda item: item["date"], reverse=True)
+    return jsonify(sorted_transactions)
 
 
 @app.get("/api/summary")
 def get_summary():
-    total_saved = 0
+    active_goals = [goal for goal in goals if goal["status"] == "active"]
+    total_saved = sum(goal["saved_amount"] for goal in active_goals)
+
     closest_goal = None
+    if active_goals:
+        closest_goal = max(
+            active_goals,
+            key=lambda goal: goal["saved_amount"] / goal["target_amount"],
+        )
 
-    for goal in goals:
-        if goal["status"] == "active":
-            total_saved = total_saved + goal["saved_amount"]
+    month_totals = {}
+    for transaction in transactions:
+        month = transaction["date"][0:7]
+        if month not in month_totals:
+            month_totals[month] = {"month": month, "in": 0, "out": 0}
 
-            if closest_goal is None:
-                closest_goal = goal
-            else:
-                goal_progress = goal["saved_amount"] / goal["target_amount"]
-                best_progress = closest_goal["saved_amount"] / closest_goal["target_amount"]
-                if goal_progress > best_progress:
-                    closest_goal = goal
+        if transaction["type"] in ("deposit", "transfer_in"):
+            month_totals[month]["in"] = month_totals[month]["in"] + transaction["amount"]
+        elif transaction["type"] in ("transfer_out", "complete"):
+            month_totals[month]["out"] = month_totals[month]["out"] + transaction["amount"]
 
-    return jsonify({
-        "total_saved": total_saved,
-        "closest_goal": closest_goal,
-        "monthly_activity": [],
-    })
+    sorted_months = sorted(month_totals.values(), key=lambda item: item["month"])
 
+    return jsonify(
+        {
+            "total_saved": total_saved,
+            "closest_goal": closest_goal,
+            "monthly_activity": sorted_months,
+        }
+    )
+
+next_transaction_id = 1
+
+def _new_transaction_id():
+    global next_transaction_id
+    transaction_id = next_transaction_id
+    next_transaction_id = next_transaction_id + 1
+    return transaction_id
+
+def _add_transaction(goal_id, transaction_type, amount, note="", date_override=None): #note and date_override provides default values if not provided
+    created_at = date_override or "2026-02-28T00:00:00Z"
+    transaction = {
+        "id": _new_transaction_id(),
+        "goal_id": goal_id,
+        "type": transaction_type,
+        "amount": amount,
+        "date": created_at,
+        "note": note,
+    }
+    transactions.append(transaction)
+    return transaction
+
+def _seed_transactions():
+    sample_transactions = [
+        (1, "deposit", 20, "Babysitting", "2026-02-20T00:00:00Z"),
+        (1, "deposit", 15, "Allowance", "2026-02-03T00:00:00Z"),
+        (2, "deposit", 10, "Gift", "2026-01-19T00:00:00Z"),
+        (2, "deposit", 12, "Snack savings", "2025-12-25T00:00:00Z"),
+        (3, "deposit", 18, "Chores", "2026-02-16T00:00:00Z"),
+        (3, "deposit", 22, "Weekly save", "2025-12-18T00:00:00Z"),
+    ]
+    
+    for goal_id, tx_type, amount, note, date_value in sample_transactions:
+        _add_transaction(
+            goal_id,
+            tx_type,
+            amount,
+            note=note,
+            date_override=date_value,
+        )
+
+
+_seed_transactions()
 
 app.run(debug=True, port=5001)
