@@ -544,6 +544,19 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-height: 650px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Optional: style the scrollbar */
+.activity-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.2);
+  border-radius: 3px;
 }
 
 .activity-item {
