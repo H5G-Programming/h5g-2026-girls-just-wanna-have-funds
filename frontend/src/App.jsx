@@ -430,9 +430,38 @@ export default function App() {
                 type="text"
                 placeholder="Goal name"
                 value={newGoal.title}
-                onChange={(event) =>
-                  setNewGoal((prev) => ({ ...prev, title: event.target.value }))
-                }
+                onChange={async (event) => {
+                  const title = event.target.value;
+                
+                  // 1️⃣ Update the title first
+                  setNewGoal((prev) => ({ ...prev, title }));
+                
+                  // 2️⃣ Call backend prediction API
+                  let predictedAmount = 0;
+                  let suggestedEmoji = "💖";
+                
+                  if (title.trim()) {
+                    try {
+                      const response = await fetch(`${API_BASE}/api/predict-goal`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ title }),
+                      });
+                      const data = await response.json();
+                      predictedAmount = Math.round(data.cost) || 0;
+                      suggestedEmoji = data.emoji || "💖";
+                    } catch (err) {
+                      console.error("Prediction API error:", err);
+                    }
+                  }
+                
+                  // 3️⃣ Update goal with predictions
+                  setNewGoal((prev) => ({
+                    ...prev,
+                    target_amount: predictedAmount,
+                    emoji: suggestedEmoji,
+                  }));
+                }}
                 required
               />
               <input
