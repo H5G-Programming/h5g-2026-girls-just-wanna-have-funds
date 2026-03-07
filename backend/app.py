@@ -281,6 +281,63 @@ def get_summary():
         }
     )
 
+def find_m(
+        days: list[float],
+        savings: list[float],
+        avg_day: float ,
+        avg_savings: float
+    ):
+    """Find the m in y=m*x + b (slope) based on historical transactions."""
+    # Calculate the numerator Σ_i(x_i-avg_x)*(y_i-avg_y)
+    numerator = sum((days[i] - avg_day) * (savings[i] - avg_savings)
+                for i in range(len(days)))
+
+    # Calculate the denominator Σ_i(x_i-avg_x)**2
+    denominator = sum((days[i] - avg_day) ** 2
+                    for i in range(len(days)))
+
+    m = numerator / denominator
+    return m
+
+def find_b(
+        avg_day: float,
+        avg_savings: float,
+        m: float
+    ):
+    """Find the b in y=m*x+b (intercept) based on historical transactions."""
+    # Calculate the intercept based on the function b=avg_y-m*avg_x
+    return avg_savings - m * avg_day
+
+@app.get("/api/summary/forecast")
+def number_of_days_until_goal(goal_amount: float) -> float:
+    # Get the dates and deposits from all transactions
+    df_transactions = pd.DataFrame(transactions)
+    df_deposits = df_transactions.query("type == 'deposit'").copy()
+    df_deposits["date"] = pd.to_datetime(df_deposits["date"])
+
+    # Convert dates to "days since first deposit" (our x)
+    df_deposits["day"] = (df_deposits["date"] - df_deposits["date"].min()).dt.days
+
+    # Convert deposits to "total amount saved since first deposit" (our y)
+    df_deposits["total_saved"] = df_deposits["amount"].cumsum()
+
+    # Store x and y as lists
+    days = df_deposits["day"].to_list()
+    savings = df_deposits["total_saved"].to_list()
+
+    # Calculate average date and average savings amount
+    avg_day = sum(days) / len(days)
+    avg_savings = sum(savings) / len(savings)
+
+    # Calculate the slope
+    m = find_m(days, savings, avg_day, avg_savings)
+
+    # Calculate the intercept
+    b = find_b(avg_day, avg_savings, m)
+
+    # Use m and b to calculate the predicted days
+    predicted_day = (goal_amount - b) / m
+    return predicted_day
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5001"))
