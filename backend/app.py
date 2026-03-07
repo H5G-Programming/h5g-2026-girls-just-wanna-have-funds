@@ -3,41 +3,74 @@ import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+from pathlib import Path
+
+import pandas as pd
+
 app = Flask(__name__)
 CORS(app)
+
+ROOT_PATH = Path(__file__).parent.parent
 
 # In-memory data for a single demo user
 user = {"id": 1, "name": "Maya"}
 
 # Simple counters to keep IDs readable
-next_goal_id = 4
+next_goal_id = 7
 next_transaction_id = 1
 
 # List of savings goals each contained in {} to have more attributes and split by ,
 goals = [
     {
         "id": 1,
+        "title": "Wireless headphones",
+        "target_amount": 250,
+        "saved_amount": 250,
+        "emoji": "🎧",
+        "image_url": "",
+        "status": "closed"
+    },
+    {
+        "id": 2,
+        "title": "New sneakers",
+        "target_amount": 175,
+        "saved_amount": 175,
+        "emoji": "👟",
+        "image_url": "",
+        "status": "closed"
+    },
+    {
+        "id": 3,
+        "title": "Cinema trip",
+        "target_amount": 140,
+        "saved_amount": 140,
+        "emoji": "🍿",
+        "image_url": "",
+        "status": "closed"
+    },
+    {
+        "id": 4,
         "title": "New sneakers",
         "target_amount": 200,
-        "saved_amount": 124,
+        "saved_amount": 35,
         "emoji": "\ud83d\udc5f",
         "image_url": "",
         "status": "active",
     },
     {
-        "id": 2,
+        "id": 5,
         "title": "Art set",
         "target_amount": 80,
-        "saved_amount": 32,
+        "saved_amount": 22,
         "emoji": "\ud83c\udfa8",
         "image_url": "",
         "status": "active",
     },
     {
-        "id": 3,
+        "id": 6,
         "title": "Concert ticket",
         "target_amount": 120,
-        "saved_amount": 95,
+        "saved_amount": 40,
         "emoji": "\ud83c\udfb6",
         "image_url": "",
         "status": "active",
@@ -49,14 +82,14 @@ transactions = []
 
 # to decalre a function you have to use keyword 'def' followed by name and parentheses
 def _new_transaction_id():
-    global next_transaction_id # Refers to the globale variable and enables us t change it instead of creating a new local one and changing that instead
+    global next_transaction_id # Refers to the globale variable and enables us to change it instead of creating a new local one and changing that instead
     transaction_id = next_transaction_id
     next_transaction_id = next_transaction_id + 1
     return transaction_id
 
 # function with arguments, because to add transaction you have to inform the computer of certain details
 def _add_transaction(goal_id, transaction_type, amount, note="", date_override=None): #note and date_override provides default values if not provided
-    created_at = date_override or datetime.utcnow().isoformat() + "Z"
+    created_at = date_override or datetime.now().isoformat() + "Z"
     transaction = {
         "id": _new_transaction_id(),
         "goal_id": goal_id,
@@ -79,17 +112,11 @@ def _find_goal(goal_id):
 
 # Seed some initial transactions for demo purposes
 def _seed_transactions():
-    today = datetime.utcnow()
-    sample_transactions = [
-        (1, "deposit", 20, "Babysitting", today - timedelta(days=8)),
-        (1, "deposit", 15, "Allowance", today - timedelta(days=25)),
-        (2, "deposit", 10, "Gift", today - timedelta(days=40)),
-        (2, "deposit", 12, "Snack savings", today - timedelta(days=65)),
-        (3, "deposit", 18, "Chores", today - timedelta(days=12)),
-        (3, "deposit", 22, "Weekly save", today - timedelta(days=72)),
-    ]
-# Loop through the sample transactions and add them to the transactions list
-    for goal_id, tx_type, amount, note, date_value in sample_transactions:
+    sample_transactions = pd.read_csv(ROOT_PATH / "transactions.csv")
+    sample_transactions['date'] = pd.to_datetime(sample_transactions.date, format='%Y-%m-%d')
+
+    # Loop through the sample transactions and add them to the transactions list
+    for _, (goal_id, tx_type, amount, note, date_value) in sample_transactions.iterrows():
         _add_transaction(
             goal_id,
             tx_type,
@@ -210,7 +237,7 @@ def complete_goal(goal_id):
         return jsonify({"error": "Goal not found."}), 404
 
     goal["status"] = "archived"
-    _add_transaction(goal_id, "complete", 0, note="Goal completed")
+    _add_transaction(goal_id, "complete", goal['target_amount'], note=f"Goal {goal['title']} completed")
     return jsonify(goal)
 
 
