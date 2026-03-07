@@ -322,12 +322,18 @@ def find_b(
     # Calculate the intercept based on the function b=avg_y-m*avg_x
     return avg_savings - m * avg_day
 
-@app.get("/api/summary/forecast")
-def number_of_days_until_goal(goal_amount: float) -> float:
+@app.post("/api/summary/forecast")
+def number_of_days_until_goal():
+    # Get goal amount
+    data = request.get_json(force=True)
+    target_amount = float(data.get("target_amount", 0))
+    saved_amount = float(data.get("saved_amount", 0))
+    goal_amount = target_amount - saved_amount
+
     # Get the dates and deposits from all transactions
     df_transactions = pd.DataFrame(transactions)
     df_deposits = df_transactions.query("type == 'deposit'").copy()
-    df_deposits["date"] = pd.to_datetime(df_deposits["date"])
+    df_deposits["date"] = pd.to_datetime(df_deposits["date"], format="mixed")
 
     # Convert dates to "days since first deposit" (our x)
     df_deposits["day"] = (df_deposits["date"] - df_deposits["date"].min()).dt.days
@@ -350,8 +356,13 @@ def number_of_days_until_goal(goal_amount: float) -> float:
     b = find_b(avg_day, avg_savings, m)
 
     # Use m and b to calculate the predicted days
-    predicted_day = (goal_amount - b) / m
-    return predicted_day
+    predicted_days = (goal_amount - b) / m
+
+    # To not get any weird display
+    predicted_days = max(0, predicted_days)
+    return jsonify({
+        "predicted_days": predicted_days
+    })
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5001"))
