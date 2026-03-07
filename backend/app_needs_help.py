@@ -1,40 +1,77 @@
+from datetime import datetime, timedelta
+import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+from pathlib import Path
+
+import pandas as pd
 
 app = Flask(__name__)
 CORS(app)
 
-# ---- Data ----
+ROOT_PATH = Path(__file__).parent.parent
 
+# In-memory data for a single demo user
 user = {"id": 1, "name": "Maya"}
 
-next_goal_id = 4
+# Simple counters to keep IDs readable
+next_goal_id = 7
+next_transaction_id = 1
 
+# List of savings goals each contained in {} to have more attributes and split by ,
 goals = [
     {
         "id": 1,
-        "title": "New sneakers",
-        "target_amount": 200,
-        "saved_amount": 124,
-        "emoji": "👟",
+        "title": "Wireless headphones",
+        "target_amount": 250,
+        "saved_amount": 250,
+        "emoji": "🎧",
         "image_url": "",
-        "status": "active",
+        "status": "closed"
     },
     {
         "id": 2,
-        "title": "Art set",
-        "target_amount": 80,
-        "saved_amount": 32,
-        "emoji": "🎨",
+        "title": "New sneakers",
+        "target_amount": 175,
+        "saved_amount": 175,
+        "emoji": "👟",
+        "image_url": "",
+        "status": "closed"
+    },
+    {
+        "id": 3,
+        "title": "Cinema trip",
+        "target_amount": 140,
+        "saved_amount": 140,
+        "emoji": "🍿",
+        "image_url": "",
+        "status": "closed"
+    },
+    {
+        "id": 4,
+        "title": "New sneakers",
+        "target_amount": 200,
+        "saved_amount": 35,
+        "emoji": "\ud83d\udc5f",
         "image_url": "",
         "status": "active",
     },
     {
-        "id": 3,
+        "id": 5,
+        "title": "Art set",
+        "target_amount": 80,
+        "saved_amount": 22,
+        "emoji": "\ud83c\udfa8",
+        "image_url": "",
+        "status": "active",
+    },
+    {
+        "id": 6,
         "title": "Concert ticket",
         "target_amount": 120,
-        "saved_amount": 95,
-        "emoji": "🎶",
+        "saved_amount": 40,
+        "emoji": "\ud83c\udfb6",
         "image_url": "",
         "status": "active",
     },
@@ -222,22 +259,17 @@ def _add_transaction(goal_id, transaction_type, amount, note="", date_override=N
     return transaction
 
 def _seed_transactions():
-    sample_transactions = [
-        (1, "deposit", 20, "Babysitting", "2026-02-20T00:00:00Z"),
-        (1, "deposit", 15, "Allowance", "2026-02-03T00:00:00Z"),
-        (2, "deposit", 10, "Gift", "2026-01-19T00:00:00Z"),
-        (2, "deposit", 12, "Snack savings", "2025-12-25T00:00:00Z"),
-        (3, "deposit", 18, "Chores", "2026-02-16T00:00:00Z"),
-        (3, "deposit", 22, "Weekly save", "2025-12-18T00:00:00Z"),
-    ]
-    
-    for goal_id, tx_type, amount, note, date_value in sample_transactions:
+    sample_transactions = pd.read_csv(ROOT_PATH / "transactions.csv")
+    sample_transactions['date'] = pd.to_datetime(sample_transactions.date, format='%Y-%m-%d')
+
+    # Loop through the sample transactions and add them to the transactions list
+    for _, (goal_id, tx_type, amount, note, date_value) in sample_transactions.iterrows():
         _add_transaction(
             goal_id,
             tx_type,
             amount,
             note=note,
-            date_override=date_value,
+            date_override=date_value.isoformat() + "Z",
         )
 
 
