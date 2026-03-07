@@ -165,6 +165,21 @@ def create_goal():
     goals.append(new_goal)
     return jsonify(new_goal), 201
 
+@app.post("/api/predict-goal")
+def predict_goal():
+    data = request.get_json(force=True)
+    goal_title = data.get("title", "").strip()
+
+    if not goal_title:
+        return jsonify({"cost": None, "emoji": ""})
+
+    # For now, you can return dummy values
+    # Later we'll integrate an AI model here
+    predicted_cost = 0  # placeholder
+    predicted_emoji = "🧡"  # placeholder
+
+    return jsonify({"cost": predicted_cost, "emoji": predicted_emoji})
+
 
 @app.post("/api/goals/<int:goal_id>/add-funds")
 def add_funds(goal_id):
@@ -180,7 +195,6 @@ def add_funds(goal_id):
 
     _add_transaction(goal_id, "deposit", amount, note=note)
     return jsonify(goal)
-
 
 @app.post("/api/goals/<int:goal_id>/move-funds")
 def move_funds(goal_id):
