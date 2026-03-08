@@ -128,6 +128,30 @@ export default function App() {
     });
   }, [goals]);
 
+  // linear regression to predict number of days until goal is reached
+  const [predictedDays, setPredictedDays] = useState("...");
+
+  useEffect(() => {
+    const runPrediction = async () => {
+      if (!summary?.closest_goal || !transactions?.length) return;
+
+      try {
+        const result = await postJson(
+          "/api/summary/forecast",
+          {
+            target_amount: summary.closest_goal.target_amount,
+            saved_amount: summary.closest_goal.saved_amount
+          }
+        );
+        setPredictedDays(Math.ceil(result.predicted_days));
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    runPrediction();
+  }, [summary, transactions]);
+
   const handleAddGoal = async (event) => {
     event.preventDefault();
     try {
@@ -279,6 +303,10 @@ export default function App() {
                       }}
                     />
                   </div>
+                  {/* New predictive text */}
+                  <p className="goal-prediction">
+                  If you continue like this, you are{" "} <strong>{predictedDays} days</strong> from reaching your goal.
+                  </p>
                 </>
               ) : (
                 <p>No goals yet. Add one to get started!</p>
@@ -379,9 +407,38 @@ export default function App() {
                 type="text"
                 placeholder="Goal name"
                 value={newGoal.title}
-                onChange={(event) =>
-                  setNewGoal((prev) => ({ ...prev, title: event.target.value }))
-                }
+                onChange={async (event) => {
+                  const title = event.target.value;
+                
+                  // 1️⃣ Update the title first
+                  setNewGoal((prev) => ({ ...prev, title }));
+                
+                  // 2️⃣ Call backend prediction API
+                  let predictedAmount = 0;
+                  let suggestedEmoji = "💖";
+                
+                  if (title.trim()) {
+                    try {
+                      const response = await fetch(`${API_BASE}/api/predict-goal`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ title }),
+                      });
+                      const data = await response.json();
+                      predictedAmount = Math.round(data.cost) || 0;
+                      suggestedEmoji = data.emoji || "💖";
+                    } catch (err) {
+                      console.error("Prediction API error:", err);
+                    }
+                  }
+                
+                  // 3️⃣ Update goal with predictions
+                  setNewGoal((prev) => ({
+                    ...prev,
+                    target_amount: predictedAmount,
+                    emoji: suggestedEmoji,
+                  }));
+                }}
                 required
               />
               <input
