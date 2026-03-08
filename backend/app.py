@@ -1,16 +1,28 @@
 from datetime import datetime, timedelta
 import os
+import json
+
+from dotenv import load_dotenv
+from pathlib import Path
+import pandas as pd
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from pathlib import Path
-
-import pandas as pd
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
 ROOT_PATH = Path(__file__).parent.parent
+
+# =================================== APP SETUP ===================================
+# 1. User dict
+# 2. Counters to goals and transactions
+# 3. Initial app goals
+# 4. Building initial transactions
+# 5. Helper functions for finding a adding a new transaction and finding a goal, 
+# =================================================================================
 
 # In-memory data for a single demo user
 user = {"id": 1, "name": "Maya"}
@@ -25,6 +37,7 @@ goals = [
         "id": 1,
         "title": "Wireless headphones",
         "target_amount": 250,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 250,
         "emoji": "🎧",
         "image_url": "",
@@ -34,6 +47,7 @@ goals = [
         "id": 2,
         "title": "New sneakers",
         "target_amount": 175,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 175,
         "emoji": "👟",
         "image_url": "",
@@ -43,6 +57,7 @@ goals = [
         "id": 3,
         "title": "Cinema trip",
         "target_amount": 140,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 140,
         "emoji": "🍿",
         "image_url": "",
@@ -52,6 +67,7 @@ goals = [
         "id": 4,
         "title": "New sneakers",
         "target_amount": 200,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 35,
         "emoji": "\ud83d\udc5f",
         "image_url": "",
@@ -61,6 +77,7 @@ goals = [
         "id": 5,
         "title": "Art set",
         "target_amount": 80,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 22,
         "emoji": "\ud83c\udfa8",
         "image_url": "",
@@ -70,6 +87,7 @@ goals = [
         "id": 6,
         "title": "Concert ticket",
         "target_amount": 120,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 40,
         "emoji": "\ud83c\udfb6",
         "image_url": "",
@@ -102,14 +120,6 @@ def _add_transaction(goal_id, transaction_type, amount, note="", date_override=N
     return transaction
 
 
-def _find_goal(goal_id):
-    # next is a function used to return the first matching item. If none is found it returns None
-    # First 'goal' is the value we return if there is a match
-    # Second 'goal' is the current item in the iteration - essentially the same as the first one but they serve different purposes
-    # goals is the list of goals we iterate over
-    # 'if' is followed by a condition (always either true or false)
-    return next((goal for goal in goals if goal["id"] == goal_id), None)
-
 # Seed some initial transactions for demo purposes
 def _seed_transactions():
     sample_transactions = pd.read_csv(ROOT_PATH / "transactions.csv")
@@ -129,6 +139,95 @@ def _seed_transactions():
 _seed_transactions()
 
 
+def _find_goal(goal_id):
+    # next is a function used to return the first matching item. If none is found it returns None
+    # First 'goal' is the value we return if there is a match
+    # Second 'goal' is the current item in the iteration - essentially the same as the first one but they serve different purposes
+    # goals is the list of goals we iterate over
+    # 'if' is followed by a condition (always either true or false)
+    return next((goal for goal in goals if goal["id"] == goal_id), None)
+
+# =========================== FORECASTING FUNCTIONALITY ===========================
+# 1. Find m
+# 2. Find b
+# 3. Run forecast
+# =================================================================================
+
+def find_m(
+        days: list[float],
+        savings: list[float],
+        avg_day: float ,
+        avg_savings: float
+    ):
+    """Find the m in y=m*x + b (slope) based on historical transactions."""
+    # Calculate the numerator Σ_i(x_i-avg_x)*(y_i-avg_y)
+    numerator = sum((days[i] - avg_day) * (savings[i] - avg_savings)
+                for i in range(len(days)))
+
+    # Calculate the denominator Σ_i(x_i-avg_x)**2
+    denominator = sum((days[i] - avg_day) ** 2
+                    for i in range(len(days)))
+
+    m = numerator / denominator
+    return m
+
+def find_b(
+        avg_day: float,
+        avg_savings: float,
+        m: float
+    ):
+    """Find the b in y=m*x+b (intercept) based on historical transactions."""
+    # Calculate the intercept based on the function b=avg_y-m*avg_x
+    return avg_savings - m * avg_day
+
+def run_forecast(goal_amount: float):
+    """Run forecast"""
+    # Get the dates and deposits from all transactions
+    df_transactions = pd.DataFrame(transactions)
+    df_deposits = df_transactions.query("type == 'deposit'").copy()
+    df_deposits["date"] = pd.to_datetime(df_deposits["date"], format="mixed")
+
+    df_deposits = df_deposits.query("note != 'Gift'").copy()
+
+    # Convert dates to "days since first deposit" (our x)
+    df_deposits["day"] = (df_deposits["date"] - df_deposits["date"].min()).dt.days
+
+    # Convert deposits to "total amount saved since first deposit" (our y)
+    df_deposits["total_saved"] = df_deposits["amount"].cumsum()
+
+    # Store x and y as lists
+    days = df_deposits["day"].to_list()
+    savings = df_deposits["total_saved"].to_list()
+
+    # Calculate average date and average savings amount
+    avg_day = sum(days) / len(days) 
+    avg_savings = sum(savings) / len(savings)
+
+    # Calculate the slope
+    m = find_m(days, savings, avg_day, avg_savings)
+
+    # Calculate the intercept
+    b = find_b(avg_day, avg_savings, m)
+
+    # Use m and b to calculate the predicted days
+    predicted_days = (goal_amount - b) / m
+
+    # To not get any weird display
+    predicted_days = max(0, predicted_days)
+
+    return predicted_days
+
+# =============================== BACKEND API SETUP ===============================
+# 1. Get User, Goal, and all transactions
+# 2. Create New Goal (create goal)
+# 3. Add funds to Goal
+# 4. Move funds from source Goal to target Goal
+# 5. Close Goal
+# 6. Complete Goal
+# 7. Create Summary
+# 8. Run forecast for closest goal
+# =================================================================================
+
 @app.get("/api/user")
 def get_user():
     # Returns the demo user data as JSON to follow API convensions (basically enables communication between frontend and backend)
@@ -140,20 +239,30 @@ def get_goals():
     return jsonify(goals)
 
 
+@app.get("/api/transactions")
+def get_transactions():
+    #sorted is a keyword that sorts a list based on a key provided, here we sort by date in descending order
+    sorted_transactions = sorted(transactions, key=lambda item: item["date"], reverse=True)
+    return jsonify(sorted_transactions)
+
+
 @app.post("/api/goals")
 def create_goal():
     global next_goal_id
     data = request.get_json(force=True)
     title = data.get("title", "").strip() # strip() removes whitespace from the beginning and end of the string
-    target_amount = float(data.get("target_amount", 0)) #.get() gives default value 0 if target_amount is not found
+    target_amount = data.get("target_amount") #.get() gives default value 0 if target_amount is not found
+    if target_amount is not None:
+        target_amount = float(target_amount)
     emoji = data.get("emoji", "\ud83d\udc9c")
     image_url = data.get("image_url", "")
+    target_amount_reasoning = "Target estimate provided by user."
 
-    # TODO: Lesson 2 Exercise - Create a new goal dictionary with the provided data
     new_goal = {
         "id": next_goal_id,
         "title": title,
         "target_amount": target_amount,
+        "target_amount_reasoning": target_amount_reasoning,
         "saved_amount": 0,
         "emoji": emoji,
         "image_url": image_url,
@@ -161,7 +270,6 @@ def create_goal():
     }
     next_goal_id = next_goal_id + 1
     
-    # TODO: Lesson 2 Exercise - Add the new goal dictionary to the list of existing goals
     goals.append(new_goal)
     return jsonify(new_goal), 201
 
@@ -190,7 +298,6 @@ def add_funds(goal_id):
     goal = _find_goal(goal_id)
 
     # Add the funds to the goal's saved amount. [] is used to access the specific key in the dictionary
-    # TODO: Lesson 2 Exercise - Complete the line below to add the amount to the saved_amount
     goal["saved_amount"] = goal["saved_amount"] + amount
 
     _add_transaction(goal_id, "deposit", amount, note=note)
@@ -205,7 +312,7 @@ def move_funds(goal_id):
     source_goal = _find_goal(goal_id) #the goal we are moving funds from
     target_goal = _find_goal(target_goal_id) #the goal we are moving funds to
 
-    # TODO: Lesson 2 - Move the funds between the two goals
+    # Move the funds between the two goals
     source_goal["saved_amount"] = source_goal["saved_amount"] - amount
     target_goal["saved_amount"] = target_goal["saved_amount"] + amount
 
@@ -224,10 +331,10 @@ def close_goal(goal_id):
     goal_to_be_closed = _find_goal(goal_id) 
     target_goal = _find_goal(target_goal_id) #the goal we are moving the remaining funds to
 
-    # TODO - Lesson 2 - Get the saved amount from the goal to be closed
+    # Get the saved amount from the goal to be closed
     amount = goal_to_be_closed["saved_amount"]
 
-    # TODO - Lesson 2 - If the amount is > 0,
+    # If the amount is > 0,
     # add the amount to the saved amount of the target goal
     # and set the saved amount of the goal to be closed to 0
     if amount > 0:
@@ -238,7 +345,7 @@ def close_goal(goal_id):
     _add_transaction(target_goal["id"], "transfer_in", amount, note="From closed goal")
 
 
-    # TODO - Lesson 2 - set the status of the goal to 'closed'
+    # set the status of the goal to 'closed'
     goal_to_be_closed["status"] = "closed"
 
     return jsonify({"source": goal_to_be_closed, "target": target_goal})
@@ -253,13 +360,6 @@ def complete_goal(goal_id):
     goal["status"] = "archived"
     _add_transaction(goal_id, "complete", goal['target_amount'], note=f"Goal {goal['title']} completed")
     return jsonify(goal)
-
-
-@app.get("/api/transactions")
-def get_transactions():
-    #sorted is a keyword that sorts a list based on a key provided, here we sort by date in descending order
-    sorted_transactions = sorted(transactions, key=lambda item: item["date"], reverse=True)
-    return jsonify(sorted_transactions)
 
 
 @app.get("/api/summary")
@@ -295,33 +395,6 @@ def get_summary():
         }
     )
 
-def find_m(
-        days: list[float],
-        savings: list[float],
-        avg_day: float ,
-        avg_savings: float
-    ):
-    """Find the m in y=m*x + b (slope) based on historical transactions."""
-    # Calculate the numerator Σ_i(x_i-avg_x)*(y_i-avg_y)
-    numerator = sum((days[i] - avg_day) * (savings[i] - avg_savings)
-                for i in range(len(days)))
-
-    # Calculate the denominator Σ_i(x_i-avg_x)**2
-    denominator = sum((days[i] - avg_day) ** 2
-                    for i in range(len(days)))
-
-    m = numerator / denominator
-    return m
-
-def find_b(
-        avg_day: float,
-        avg_savings: float,
-        m: float
-    ):
-    """Find the b in y=m*x+b (intercept) based on historical transactions."""
-    # Calculate the intercept based on the function b=avg_y-m*avg_x
-    return avg_savings - m * avg_day
-
 @app.post("/api/summary/forecast")
 def number_of_days_until_goal():
     # Get goal amount
@@ -330,42 +403,13 @@ def number_of_days_until_goal():
     saved_amount = float(data.get("saved_amount", 0))
     goal_amount = target_amount - saved_amount
 
-    # Get the dates and deposits from all transactions
-    df_transactions = pd.DataFrame(transactions)
-    df_deposits = df_transactions.query("type == 'deposit'").copy()
+    # Run forecast
+    predicted_days = run_forecast(goal_amount=goal_amount)
 
-    # Remove gifts (we don't want to count on these as they are unpredictable)
-    df_deposits = df_deposits.query("description != 'Gift'").copy()
-    df_deposits["date"] = pd.to_datetime(df_deposits["date"], format="mixed")
-
-    # Convert dates to "days since first deposit" (our x)
-    df_deposits["day"] = (df_deposits["date"] - df_deposits["date"].min()).dt.days
-
-    # Convert deposits to "total amount saved since first deposit" (our y)
-    df_deposits["total_saved"] = df_deposits["amount"].cumsum()
-
-    # Store x and y as lists
-    days = df_deposits["day"].to_list()
-    savings = df_deposits["total_saved"].to_list()
-
-    # Calculate average date and average savings amount
-    avg_day = sum(days) / len(days)
-    avg_savings = sum(savings) / len(savings)
-
-    # Calculate the slope
-    m = find_m(days, savings, avg_day, avg_savings)
-
-    # Calculate the intercept
-    b = find_b(avg_day, avg_savings, m)
-
-    # Use m and b to calculate the predicted days
-    predicted_days = (goal_amount - b) / m
-
-    # To not get any weird display
-    predicted_days = max(0, predicted_days)
     return jsonify({
         "predicted_days": predicted_days
     })
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5001"))
