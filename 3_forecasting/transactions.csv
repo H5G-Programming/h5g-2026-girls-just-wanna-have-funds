@@ -9,6 +9,7 @@ goal_id,type,amount,description,date
 1,deposit,10,Weekly save,2025-09-28
 1,deposit,18,Chores,2025-10-02
 1,deposit,16,Allowance,2025-10-09
+3,deposit,10,Weekly save,2025-10-10
 1,deposit,9,Snack savings,2025-10-12
 1,deposit,15,Allowance,2025-10-16
 1,deposit,24,Babysitting,2025-10-19
@@ -26,6 +27,7 @@ goal_id,type,amount,description,date
 2,deposit,15,Allowance,2025-12-11
 2,deposit,10,Weekly save,2025-12-14
 2,deposit,18,Chores,2025-12-18
+5,deposit,200,Gift,2025-12-24
 2,deposit,15,Allowance,2025-12-25
 2,deposit,20,Babysitting,2025-12-29
 2,deposit,7,Snack savings,2026-01-01
@@ -37,17 +39,16 @@ goal_id,type,amount,description,date
 3,deposit,15,Allowance,2026-01-29
 3,deposit,24,Babysitting,2026-02-02
 3,deposit,8,Snack savings,2026-02-05
-3,deposit,16,Allowance,2026-02-12
+3,deposit,15,Allowance,2026-02-10
 3,deposit,10,Weekly save,2026-02-15
 3,deposit,9,Snack savings,2026-02-19
 4,deposit,15,Allowance,2026-02-19
 3,deposit,5,Snack savings,2026-02-22
-3,deposit,10,Weekly save,2026-02-26
-5,deposit,15,Allowance,2026-02-26
 4,deposit,20,Babysitting,2026-02-28
+5,deposit,15,Allowance,2026-02-28
 3,complete,140,Goal 'Bluetooth speaker' completed,2026-02-28
+4,deposit,5,Snack savings,2026-03-01
 6,deposit,15,Chores,2026-03-02
-5,deposit,7,Gift,2026-03-03
-6,deposit,16,Allowance,2026-03-05
 6,deposit,9,Weekly save,2026-03-04
-4,deposit,10,Snack savings,2026-03-06
+6,deposit,16,Allowance,2026-03-08
+4,deposit,5,Snack savings,2026-03-09

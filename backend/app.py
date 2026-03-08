@@ -333,6 +333,9 @@ def number_of_days_until_goal():
     # Get the dates and deposits from all transactions
     df_transactions = pd.DataFrame(transactions)
     df_deposits = df_transactions.query("type == 'deposit'").copy()
+
+    # Remove gifts (we don't want to count on these as they are unpredictable)
+    df_deposits = df_deposits.query("description != 'Gift'").copy()
     df_deposits["date"] = pd.to_datetime(df_deposits["date"], format="mixed")
 
     # Convert dates to "days since first deposit" (our x)
