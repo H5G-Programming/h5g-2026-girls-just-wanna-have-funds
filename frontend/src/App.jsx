@@ -392,7 +392,6 @@ export default function App() {
                 onChange={(event) =>
                   setNewGoal((prev) => ({ ...prev, target_amount: event.target.value }))
                 }
-                required
               />
               <input
                 type="text"
@@ -428,9 +427,19 @@ export default function App() {
                     </div>
                     <div>
                       <h4>{goal.title}</h4>
-                      <p>
+                      <p className="goal-amount">
                         {formatMoney(goal.saved_amount)} /{" "}
-                        {formatMoney(goal.target_amount)}
+                        <span className="amount-with-tooltip">
+                          {formatMoney(goal.target_amount)}
+
+                          <span className="info-icon">i</span>
+
+                          {goal.target_amount_reasoning && (
+                            <span className="tooltip">
+                              {goal.target_amount_reasoning}
+                            </span>
+                          )}
+                        </span>
                       </p>
                     </div>
                   </div>

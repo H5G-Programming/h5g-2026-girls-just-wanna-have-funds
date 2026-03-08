@@ -1,16 +1,32 @@
 from datetime import datetime, timedelta
 import os
+import json
+
+from dotenv import load_dotenv
+from pathlib import Path
+import pandas as pd
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from mistralai import Mistral
+from tavily import TavilyClient
+from pydantic import BaseModel
+from pydantic import Field
 
-from pathlib import Path
-
-import pandas as pd
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
 ROOT_PATH = Path(__file__).parent.parent
+
+# =================================== APP SETUP ===================================
+# 1. User dict
+# 2. Counters to goals and transactions
+# 3. Initial app goals
+# 4. Building initial transactions
+# 5. Helper functions for finding a adding a new transaction and finding a goal, 
+# =================================================================================
 
 # In-memory data for a single demo user
 user = {"id": 1, "name": "Maya"}
@@ -25,6 +41,7 @@ goals = [
         "id": 1,
         "title": "Wireless headphones",
         "target_amount": 250,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 250,
         "emoji": "🎧",
         "image_url": "",
@@ -34,6 +51,7 @@ goals = [
         "id": 2,
         "title": "New sneakers",
         "target_amount": 175,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 175,
         "emoji": "👟",
         "image_url": "",
@@ -43,6 +61,7 @@ goals = [
         "id": 3,
         "title": "Cinema trip",
         "target_amount": 140,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 140,
         "emoji": "🍿",
         "image_url": "",
@@ -52,6 +71,7 @@ goals = [
         "id": 4,
         "title": "New sneakers",
         "target_amount": 200,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 35,
         "emoji": "\ud83d\udc5f",
         "image_url": "",
@@ -61,6 +81,7 @@ goals = [
         "id": 5,
         "title": "Art set",
         "target_amount": 80,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 22,
         "emoji": "\ud83c\udfa8",
         "image_url": "",
@@ -70,6 +91,7 @@ goals = [
         "id": 6,
         "title": "Concert ticket",
         "target_amount": 120,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 40,
         "emoji": "\ud83c\udfb6",
         "image_url": "",
@@ -102,14 +124,6 @@ def _add_transaction(goal_id, transaction_type, amount, note="", date_override=N
     return transaction
 
 
-def _find_goal(goal_id):
-    # next is a function used to return the first matching item. If none is found it returns None
-    # First 'goal' is the value we return if there is a match
-    # Second 'goal' is the current item in the iteration - essentially the same as the first one but they serve different purposes
-    # goals is the list of goals we iterate over
-    # 'if' is followed by a condition (always either true or false)
-    return next((goal for goal in goals if goal["id"] == goal_id), None)
-
 # Seed some initial transactions for demo purposes
 def _seed_transactions():
     sample_transactions = pd.read_csv(ROOT_PATH / "transactions.csv")
@@ -129,6 +143,196 @@ def _seed_transactions():
 _seed_transactions()
 
 
+def _find_goal(goal_id):
+    # next is a function used to return the first matching item. If none is found it returns None
+    # First 'goal' is the value we return if there is a match
+    # Second 'goal' is the current item in the iteration - essentially the same as the first one but they serve different purposes
+    # goals is the list of goals we iterate over
+    # 'if' is followed by a condition (always either true or false)
+    return next((goal for goal in goals if goal["id"] == goal_id), None)
+
+# =========================== FORECASTING FUNCTIONALITY ===========================
+# 1. Find m
+# 2. Find b
+# 3. Run forecast
+# =================================================================================
+
+def find_m(
+        days: list[float],
+        savings: list[float],
+        avg_day: float ,
+        avg_savings: float
+    ):
+    """Find the m in y=m*x + b (slope) based on historical transactions."""
+    # Calculate the numerator Σ_i(x_i-avg_x)*(y_i-avg_y)
+    numerator = sum((days[i] - avg_day) * (savings[i] - avg_savings)
+                for i in range(len(days)))
+
+    # Calculate the denominator Σ_i(x_i-avg_x)**2
+    denominator = sum((days[i] - avg_day) ** 2
+                    for i in range(len(days)))
+
+    m = numerator / denominator
+    return m
+
+def find_b(
+        avg_day: float,
+        avg_savings: float,
+        m: float
+    ):
+    """Find the b in y=m*x+b (intercept) based on historical transactions."""
+    # Calculate the intercept based on the function b=avg_y-m*avg_x
+    return avg_savings - m * avg_day
+
+def run_forecast(goal_amount: float):
+    """Run forecast"""
+    # Get the dates and deposits from all transactions
+    df_transactions = pd.DataFrame(transactions)
+    df_deposits = df_transactions.query("type == 'deposit'").copy()
+    df_deposits["date"] = pd.to_datetime(df_deposits["date"], format="mixed")
+
+    # Convert dates to "days since first deposit" (our x)
+    df_deposits["day"] = (df_deposits["date"] - df_deposits["date"].min()).dt.days
+
+    # Convert deposits to "total amount saved since first deposit" (our y)
+    df_deposits["total_saved"] = df_deposits["amount"].cumsum()
+
+    # Store x and y as lists
+    days = df_deposits["day"].to_list()
+    savings = df_deposits["total_saved"].to_list()
+
+    # Calculate average date and average savings amount
+    avg_day = sum(days) / len(days)
+    avg_savings = sum(savings) / len(savings)
+
+    # Calculate the slope
+    m = find_m(days, savings, avg_day, avg_savings)
+
+    # Calculate the intercept
+    b = find_b(avg_day, avg_savings, m)
+
+    # Use m and b to calculate the predicted days
+    predicted_days = (goal_amount - b) / m
+
+    # To not get any weird display
+    predicted_days = max(0, predicted_days)
+
+    return predicted_days
+
+# ============================== GENAI FUNCTIONATILY ==============================
+# 1. Tavily tool definition
+# 2. Structured output model
+# 3. System prompt
+# 4. estimate_price function
+# =================================================================================
+
+# Search Tavily tool definition
+def search_tavily(search_query: str) -> list:
+    """Search for specific query on the internet."""
+    client = TavilyClient(api_key=os.getenv("TAVILY_KEY"))
+    result = client.search(query=search_query)
+    return result.get("results", [])
+
+# Tool definition for LLM
+LLM_TOOLS = [{
+    "type": "function",
+    "function": {
+        "name": "search_tavily",
+        "description": "Search for specific query on the internet.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "search_query": {
+                    "type": "string",
+                    "description": "The search query to search for online.",
+                }
+            },
+            "required": ["search_query"],
+        },
+    },
+}]
+
+SYSTEM_PROMPT = (
+    "You are an expert in finding and estimating the cost of an item or financial goal based on limited user input. "
+    "You will receive a few words from the user on what they are setting as a new financial goal for themselves and "
+    "your job will be to give them an estimate for how much it will cost them to achieve this goal / aquire the item.\n"
+    "You are welcome to use the search tool before giving your answer, but focus on finding pricing information for the item.\n"
+    "The users are 13-16 year old danish girls, so provide cost estimates in DKK and makes sure to adapt any web searches "
+    "to fit with what a teenage girl would like to do (i.e. if the user says 'New clothes', search 'new clothes for teenage girls price').\n"   
+    "Your response should ONLY be a number in DKK. No explanation or anything else."
+)
+
+# Structured output
+class Output(BaseModel):
+    estimated_price: float = Field(
+        description="The estimated price for the item provided by the user."
+    )
+    reasoning: str = Field(
+        description="A short reasoning, describing the evidence for this price."
+    )
+
+# Estimating price with LLM if not provided
+def estimate_price(user_input: str, system_prompt:str, model: str = "mistral-small-2506") -> dict:
+    """Use an LLM to search the internet and estimate an appropriate price for a goal."""
+
+    # 1. Create chat client
+    client = Mistral(api_key=os.getenv("MISTRAL_KEY"))
+
+    # 2. Define messages
+    messages = [
+    {"role": "system", "content": system_prompt},
+    {"role": "user", "content": user_input},
+    ]
+
+    # 3. Call LLM to get search result
+    chat_response = client.chat.complete(
+        model= model,
+        messages = messages,
+        tools = LLM_TOOLS,
+        temperature=1
+    )
+    response = chat_response.choices[0].message
+
+    messages.append(response)
+    
+    # 4. Execute tool calls
+    if response.tool_calls:
+        for tool_call in response.tool_calls:
+            args = tool_call.function.arguments
+            if tool_call.function.name == 'search_tavily':
+                web_results = search_tavily(**json.loads(args))
+                tool_result = "\n\n".join(f"{r['title']}\n{r['content']}" for r in web_results)
+                messages.append({
+                    "role":"tool",
+                    "name":tool_call.function.name,
+                    "content": tool_result,
+                    "tool_call_id":tool_call.id
+                })
+    else:
+        return {"estimated_price": response.content, "reasoning": "LLM estimated immediately."}
+    
+    # 5. Get structured response from LLM
+    chat_response = client.chat.parse(
+        model= model,
+        messages = messages,
+        response_format=Output
+    )
+
+    structured_output = json.loads(chat_response.choices[0].message.content)
+
+    return structured_output
+
+# =============================== BACKEND API SETUP ===============================
+# 1. Get User, Goal, and all transactions
+# 2. Create New Goal (create goal)
+# 3. Add funds to Goal
+# 4. Move funds from source Goal to target Goal
+# 5. Close Goal
+# 6. Complete Goal
+# 7. Create Summary
+# 8. Run forecast for closest goal
+# =================================================================================
+
 @app.get("/api/user")
 def get_user():
     # Returns the demo user data as JSON to follow API convensions (basically enables communication between frontend and backend)
@@ -140,20 +344,40 @@ def get_goals():
     return jsonify(goals)
 
 
+@app.get("/api/transactions")
+def get_transactions():
+    #sorted is a keyword that sorts a list based on a key provided, here we sort by date in descending order
+    sorted_transactions = sorted(transactions, key=lambda item: item["date"], reverse=True)
+    return jsonify(sorted_transactions)
+
+
 @app.post("/api/goals")
 def create_goal():
     global next_goal_id
     data = request.get_json(force=True)
     title = data.get("title", "").strip() # strip() removes whitespace from the beginning and end of the string
-    target_amount = float(data.get("target_amount", 0)) #.get() gives default value 0 if target_amount is not found
+    target_amount = data.get("target_amount") #.get() gives default value 0 if target_amount is not found
+    if target_amount is not None:
+        target_amount = float(target_amount)
     emoji = data.get("emoji", "\ud83d\udc9c")
     image_url = data.get("image_url", "")
+    target_amount_reasoning = "Target estimate provided by user."
+
+    # If no target_amount is given, estimate with LLM
+    if target_amount is None or target_amount <= 0:
+        estimated_price = estimate_price(
+            user_input=title,
+            system_prompt=SYSTEM_PROMPT
+        )
+        target_amount = estimated_price.get("estimated_price")
+        target_amount_reasoning = estimated_price.get("reasoning")
 
     # TODO: Lesson 2 Exercise - Create a new goal dictionary with the provided data
     new_goal = {
         "id": next_goal_id,
         "title": title,
         "target_amount": target_amount,
+        "target_amount_reasoning": target_amount_reasoning,
         "saved_amount": 0,
         "emoji": emoji,
         "image_url": image_url,
@@ -241,13 +465,6 @@ def complete_goal(goal_id):
     return jsonify(goal)
 
 
-@app.get("/api/transactions")
-def get_transactions():
-    #sorted is a keyword that sorts a list based on a key provided, here we sort by date in descending order
-    sorted_transactions = sorted(transactions, key=lambda item: item["date"], reverse=True)
-    return jsonify(sorted_transactions)
-
-
 @app.get("/api/summary")
 def get_summary():
     active_goals = [goal for goal in goals if goal["status"] == "active"]
@@ -280,6 +497,21 @@ def get_summary():
             "monthly_activity": sorted_months,
         }
     )
+
+@app.post("/api/summary/forecast")
+def number_of_days_until_goal():
+    # Get goal amount
+    data = request.get_json(force=True)
+    target_amount = float(data.get("target_amount", 0))
+    saved_amount = float(data.get("saved_amount", 0))
+    goal_amount = target_amount - saved_amount
+
+    # Run forecast
+    predicted_days = run_forecast(goal_amount=goal_amount)
+
+    return jsonify({
+        "predicted_days": predicted_days
+    })
 
 
 if __name__ == "__main__":
