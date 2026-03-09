@@ -1,0 +1,28 @@
+text.color: 2C244D
+
+legend.fontsize: 13
+xtick.labelsize: 10
+ytick.labelsize: 10
+axes.titlesize: 13
+figure.figsize: 14, 6
+
+axes.spines.left: true
+axes.spines.bottom: true
+axes.spines.top: false
+axes.spines.right: false
+
+date.autoformatter.month: %b-%Y
+
+grid.color:     "#c2c2c2"
+grid.linestyle: "--"
+grid.linewidth: 0.2
+grid.alpha:     0.7 
+
+axes.facecolor: FFFFFF
+xtick.bottom: true
+ytick.left: true
+axes.grid: true
+xtick.major.bottom: true
+ytick.major.left: true 
+
+axes.prop_cycle: cycler('color', ['2f195f', 'ff7bd5', 'ffa84f', 'e4c89f', '7bd7ff', 'a96b82', '5e3bce'])

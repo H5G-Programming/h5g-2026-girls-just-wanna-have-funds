@@ -128,52 +128,29 @@ export default function App() {
     });
   }, [goals]);
 
-  // linear regresssion to predict number of days until goal is reached
-  const calculatePredictedDays = (goal, transactions) => {
-  if (!transactions?.length) return "...";
+  // linear regression to predict number of days until goal is reached
+  const [predictedDays, setPredictedDays] = useState("...");
 
-  // Filter transactions for this goal
-  const goalTx = transactions
-    .filter(tx => tx.goal_id === goal.id)
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  useEffect(() => {
+    const runPrediction = async () => {
+      if (!summary?.closest_goal || !transactions?.length) return;
 
-  if (goalTx.length < 2) return "..."; // not enough data to regress
+      try {
+        const result = await postJson(
+          "/api/summary/forecast",
+          {
+            target_amount: summary.closest_goal.target_amount,
+            saved_amount: summary.closest_goal.saved_amount
+          }
+        );
+        setPredictedDays(Math.ceil(result.predicted_days));
+      } catch (err) {
+        setError(err.message);
+      }
+    };
 
-  const firstDate = new Date(goalTx[0].date);
-
-  // x = days since first transaction
-  const x = goalTx.map(tx => (new Date(tx.date) - firstDate) / (1000 * 60 * 60 * 24));
-
-  // y = cumulative savings (add deposits, subtract transfer_out and complete)
-  const y = goalTx.reduce((acc, tx, i) => {
-    const sign = tx.type === "deposit" ? 1 : -1; // deposit +, others -
-    acc.push((acc[i - 1] || 0) + tx.amount * sign);
-    return acc;
-  }, []);
-
-  // Linear regression calculation
-  const n = x.length;
-  const sumX = x.reduce((a, b) => a + b, 0);
-  const sumY = y.reduce((a, b) => a + b, 0);
-  const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
-  const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
-
-  const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-  const b = (sumY - m * sumX) / n;
-
-  if (m <= 0) return "..."; // not increasing, can't predict
-
-  // Days remaining to reach target
-  const remaining = goal.target_amount - goal.saved_amount;
-  const predictedDaysFromToday = remaining / m;
-
-  return Math.ceil(predictedDaysFromToday);
-};
-
-  // predictedDays until goal is reached
-  const predictedDays = summary?.closest_goal
-  ? calculatePredictedDays(summary.closest_goal, transactions)
-  : "...";
+    runPrediction();
+  }, [summary, transactions]);
 
   const handleAddGoal = async (event) => {
     event.preventDefault();
