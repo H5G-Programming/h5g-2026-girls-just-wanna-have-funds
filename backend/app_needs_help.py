@@ -164,10 +164,10 @@ def find_m(
     # EXERCISE 1: Implement finding m
     # =============================================
     # Calculate the numerator Σ_i(x_i-avg_x)*(y_i-avg_y)
-    numerator = ___ # TODO: Implement the numerator for finding m
+    numerator = sum((days[i]-avg_day)*(savings[i]-avg_savings) for i in range(len(days)))
 
     # Calculate the denominator Σ_i(x_i-avg_x)**2
-    denominator = ___ # TODO: Implement the denominator for finding m
+    denominator = sum((days[i]-avg_day)**2 for i in range(len(days)))
 
     m = numerator / denominator
     return m
@@ -182,7 +182,7 @@ def find_b(
     # EXERCISE 2: Implement finding b
     # =============================================
     # Calculate the intercept based on the function b=avg_y-m*avg_x
-    b = ___ # TODO: Implement finding b
+    b = avg_savings - m*avg_day
     return b
 
 def run_forecast(goal_amount: float):
@@ -197,7 +197,7 @@ def run_forecast(goal_amount: float):
     # first exercise.
     # HINT: What type of deposits do we not include?
     # =============================================
-    df_deposits = df_deposits.query("note != '___'").copy() # TODO: fill in the code
+    df_deposits = df_deposits.query("note != 'Gift'").copy() # TODO: fill in the code
 
     # Convert dates to "days since first deposit" (our x)
     df_deposits["day"] = (df_deposits["date"] - df_deposits["date"].min()).dt.days
@@ -223,8 +223,10 @@ def run_forecast(goal_amount: float):
     # =============================================
     # EXERCISE 3.2: Predict the number of days for
     # reaching savings goal using b and m
+    # total_savings = m*days + b
+    # days = (total_savings - b) / m
     # =============================================
-    predicted_days = ____
+    predicted_days = (goal_amount - b)/m
 
     # To not get any weird display
     predicted_days = max(0, predicted_days)
