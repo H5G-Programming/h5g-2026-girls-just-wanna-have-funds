@@ -45,7 +45,8 @@ goals = [
         "saved_amount": 250,
         "emoji": "🎧",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 0,
     },
     {
         "id": 2,
@@ -55,7 +56,8 @@ goals = [
         "saved_amount": 175,
         "emoji": "👟",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 1,
     },
     {
         "id": 3,
@@ -65,7 +67,8 @@ goals = [
         "saved_amount": 140,
         "emoji": "🍿",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 2,
     },
     {
         "id": 4,
@@ -76,6 +79,7 @@ goals = [
         "emoji": "\ud83d\udc5f",
         "image_url": "",
         "status": "active",
+        "priority": 3,
     },
     {
         "id": 5,
@@ -86,6 +90,7 @@ goals = [
         "emoji": "\ud83c\udfa8",
         "image_url": "",
         "status": "active",
+        "priority": 4,
     },
     {
         "id": 6,
@@ -96,6 +101,7 @@ goals = [
         "emoji": "\ud83c\udfb6",
         "image_url": "",
         "status": "active",
+        "priority": 5,
     },
 ]
 
@@ -343,7 +349,8 @@ def get_user():
 
 @app.get("/api/goals")
 def get_goals():
-    return jsonify(goals)
+    sorted_goals = sorted(goals, key=lambda goal: goal["priority"])
+    return jsonify(sorted_goals)
 
 
 @app.get("/api/transactions")
@@ -384,9 +391,10 @@ def create_goal():
         "emoji": emoji,
         "image_url": image_url,
         "status": "active",
+        "priority": len(goals),
     }
     next_goal_id = next_goal_id + 1
-    
+
     # TODO: Lesson 2 Exercise - Add the new goal dictionary to the list of existing goals
     goals.append(new_goal)
     return jsonify(new_goal), 201
@@ -528,6 +536,34 @@ def number_of_days_until_goal():
     return jsonify({
         "predicted_days": predicted_days
     })
+
+
+@app.post("/api/goals/reorder")
+def reorder_goals():
+    data = request.get_json(force=True)
+    new_order = data["goal_ids"]
+
+    # =============================================
+    # EXERCISE 6: Prioritize your goals!
+    # =============================================
+    # The frontend sent a list of goal IDs in the new order.
+    # Example: new_order = [3, 1, 2]
+    #   → goal 3 should be priority 0 (first)
+    #   → goal 1 should be priority 1 (second)
+    #   → goal 2 should be priority 2 (third)
+    #
+    # Use range(len(new_order)) to loop through positions.
+    # For each position i:
+    #   1. Get the goal_id from new_order[i]
+    #   2. Use _find_goal() to get the goal dictionary
+    #   3. Set goal["priority"] to i
+
+    for i in range(len(new_order)):
+        goal_id = new_order[i]
+        goal = _find_goal(goal_id)
+        goal["priority"] = _____  # What should the priority be?
+
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":

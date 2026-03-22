@@ -45,7 +45,8 @@ goals = [
         "saved_amount": 250,
         "emoji": "🎧",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 0,
     },
     {
         "id": 2,
@@ -55,7 +56,8 @@ goals = [
         "saved_amount": 175,
         "emoji": "👟",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 1,
     },
     {
         "id": 3,
@@ -65,7 +67,8 @@ goals = [
         "saved_amount": 140,
         "emoji": "🍿",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 2,
     },
     {
         "id": 4,
@@ -76,6 +79,7 @@ goals = [
         "emoji": "\ud83d\udc5f",
         "image_url": "",
         "status": "active",
+        "priority": 3,
     },
     {
         "id": 5,
@@ -86,6 +90,7 @@ goals = [
         "emoji": "\ud83c\udfa8",
         "image_url": "",
         "status": "active",
+        "priority": 4,
     },
     {
         "id": 6,
@@ -96,6 +101,7 @@ goals = [
         "emoji": "\ud83c\udfb6",
         "image_url": "",
         "status": "active",
+        "priority": 5,
     },
 ]
 
@@ -341,7 +347,8 @@ def get_user():
 
 @app.get("/api/goals")
 def get_goals():
-    return jsonify(goals)
+    sorted_goals = sorted(goals, key=lambda goal: goal["priority"])
+    return jsonify(sorted_goals)
 
 
 @app.get("/api/transactions")
@@ -382,6 +389,7 @@ def create_goal():
         "emoji": emoji,
         "image_url": image_url,
         "status": "active",
+        "priority": len(goals),
     }
     next_goal_id = next_goal_id + 1
     
@@ -526,6 +534,19 @@ def number_of_days_until_goal():
     return jsonify({
         "predicted_days": predicted_days
     })
+
+
+@app.post("/api/goals/reorder")
+def reorder_goals():
+    data = request.get_json(force=True)
+    new_order = data["goal_ids"]
+
+    for i in range(len(new_order)):
+        goal_id = new_order[i]
+        goal = _find_goal(goal_id)
+        goal["priority"] = i
+
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
