@@ -552,16 +552,23 @@ def reorder_goals():
     #   → goal 1 should be priority 1 (second)
     #   → goal 2 should be priority 2 (third)
     #
-    # Use range(len(new_order)) to loop through positions.
-    # For each position i:
+    # Understanding range(len(...)):
+    #   new_order is a list, e.g. [3, 1, 2]
+    #   len(new_order) gives us how many items are in the list → 3
+    #   range(3) gives us the numbers 0, 1, 2 (it always starts at 0!)
+    #   So range(len(new_order)) gives us one number per item — perfect for positions!
+    #
+    #   Inside the loop, i is the position number, and new_order[i] is the goal ID at that position.
+    #
+    # Write a for-loop: for i in range(len(new_order)):
+    #
+    # Inside the loop, for each position i:
     #   1. Get the goal_id from new_order[i]
-    #   2. Use _find_goal() to get the goal dictionary
-    #   3. Set goal["priority"] to i
+    #   2. Use _find_goal(goal_id) to look up the goal dictionary
+    #   3. Set goal["priority"] to i (the position number)
 
-    for i in range(len(new_order)):
-        goal_id = new_order[i]
-        goal = _find_goal(goal_id)
-        goal["priority"] = _____  # What should the priority be?
+    # YOUR CODE HERE (4 lines)
+
 
     return jsonify({"ok": True})
 
