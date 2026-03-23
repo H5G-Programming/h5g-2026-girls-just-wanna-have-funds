@@ -6,6 +6,12 @@ from dotenv import load_dotenv
 from pathlib import Path
 import pandas as pd
 
+import json
+
+from dotenv import load_dotenv
+from pathlib import Path
+import pandas as pd
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from mistralai import Mistral
@@ -14,11 +20,20 @@ from pydantic import BaseModel
 from pydantic import Field
 
 load_dotenv()
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
 ROOT_PATH = Path(__file__).parent.parent
+
+# =================================== APP SETUP ===================================
+# 1. User dict
+# 2. Counters to goals and transactions
+# 3. Initial app goals
+# 4. Building initial transactions
+# 5. Helper functions for finding a adding a new transaction and finding a goal, 
+# =================================================================================
 
 # =================================== APP SETUP ===================================
 # 1. User dict
@@ -42,6 +57,7 @@ goals = [
         "title": "Wireless headphones",
         "target_amount": 250,
         "target_amount_reasoning": "Target estimate provided by user.",
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 250,
         "emoji": "🎧",
         "image_url": "",
@@ -51,6 +67,7 @@ goals = [
         "id": 2,
         "title": "New sneakers",
         "target_amount": 175,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 175,
         "emoji": "👟",
@@ -62,6 +79,7 @@ goals = [
         "title": "Cinema trip",
         "target_amount": 140,
         "target_amount_reasoning": "Target estimate provided by user.",
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 140,
         "emoji": "🍿",
         "image_url": "",
@@ -71,6 +89,7 @@ goals = [
         "id": 4,
         "title": "New sneakers",
         "target_amount": 200,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 35,
         "emoji": "\ud83d\udc5f",
@@ -82,6 +101,7 @@ goals = [
         "title": "Art set",
         "target_amount": 80,
         "target_amount_reasoning": "Target estimate provided by user.",
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 22,
         "emoji": "\ud83c\udfa8",
         "image_url": "",
@@ -91,6 +111,7 @@ goals = [
         "id": 6,
         "title": "Concert ticket",
         "target_amount": 120,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 40,
         "emoji": "\ud83c\udfb6",
@@ -351,11 +372,21 @@ def get_transactions():
     return jsonify(sorted_transactions)
 
 
+@app.get("/api/transactions")
+def get_transactions():
+    #sorted is a keyword that sorts a list based on a key provided, here we sort by date in descending order
+    sorted_transactions = sorted(transactions, key=lambda item: item["date"], reverse=True)
+    return jsonify(sorted_transactions)
+
+
 @app.post("/api/goals")
 def create_goal():
     global next_goal_id
     data = request.get_json(force=True)
     title = data.get("title", "").strip() # strip() removes whitespace from the beginning and end of the string
+    target_amount = data.get("target_amount") #.get() gives default value 0 if target_amount is not found
+    if target_amount is not None:
+        target_amount = float(target_amount)
     target_amount = data.get("target_amount") #.get() gives default value 0 if target_amount is not found
     if target_amount is not None:
         target_amount = float(target_amount)
@@ -372,11 +403,11 @@ def create_goal():
         target_amount = estimated_price.get("estimated_price")
         target_amount_reasoning = estimated_price.get("reasoning")
 
-    # TODO: Lesson 2 Exercise - Create a new goal dictionary with the provided data
     new_goal = {
         "id": next_goal_id,
         "title": title,
         "target_amount": target_amount,
+        "target_amount_reasoning": target_amount_reasoning,
         "target_amount_reasoning": target_amount_reasoning,
         "saved_amount": 0,
         "emoji": emoji,
@@ -385,7 +416,6 @@ def create_goal():
     }
     next_goal_id = next_goal_id + 1
     
-    # TODO: Lesson 2 Exercise - Add the new goal dictionary to the list of existing goals
     goals.append(new_goal)
     return jsonify(new_goal), 201
 
@@ -414,7 +444,6 @@ def add_funds(goal_id):
     goal = _find_goal(goal_id)
 
     # Add the funds to the goal's saved amount. [] is used to access the specific key in the dictionary
-    # TODO: Lesson 2 Exercise - Complete the line below to add the amount to the saved_amount
     goal["saved_amount"] = goal["saved_amount"] + amount
 
     _add_transaction(goal_id, "deposit", amount, note=note)
@@ -429,7 +458,7 @@ def move_funds(goal_id):
     source_goal = _find_goal(goal_id) #the goal we are moving funds from
     target_goal = _find_goal(target_goal_id) #the goal we are moving funds to
 
-    # TODO: Lesson 2 - Move the funds between the two goals
+    # Move the funds between the two goals
     source_goal["saved_amount"] = source_goal["saved_amount"] - amount
     target_goal["saved_amount"] = target_goal["saved_amount"] + amount
 
@@ -448,10 +477,10 @@ def close_goal(goal_id):
     goal_to_be_closed = _find_goal(goal_id) 
     target_goal = _find_goal(target_goal_id) #the goal we are moving the remaining funds to
 
-    # TODO - Lesson 2 - Get the saved amount from the goal to be closed
+    # Get the saved amount from the goal to be closed
     amount = goal_to_be_closed["saved_amount"]
 
-    # TODO - Lesson 2 - If the amount is > 0,
+    # If the amount is > 0,
     # add the amount to the saved amount of the target goal
     # and set the saved amount of the goal to be closed to 0
     if amount > 0:
@@ -462,7 +491,7 @@ def close_goal(goal_id):
     _add_transaction(target_goal["id"], "transfer_in", amount, note="From closed goal")
 
 
-    # TODO - Lesson 2 - set the status of the goal to 'closed'
+    # set the status of the goal to 'closed'
     goal_to_be_closed["status"] = "closed"
 
     return jsonify({"source": goal_to_be_closed, "target": target_goal})
@@ -523,9 +552,13 @@ def number_of_days_until_goal():
     # Run forecast
     predicted_days = run_forecast(goal_amount=goal_amount)
 
+    # Run forecast
+    predicted_days = run_forecast(goal_amount=goal_amount)
+
     return jsonify({
         "predicted_days": predicted_days
     })
+
 
 
 if __name__ == "__main__":

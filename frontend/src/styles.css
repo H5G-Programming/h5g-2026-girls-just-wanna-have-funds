@@ -576,6 +576,15 @@ body {
   border-radius: 14px;
 }
 
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff4fd;
+  padding: 12px;
+  border-radius: 14px;
+}
+
 .activity-type {
   margin: 0;
   font-weight: 600;

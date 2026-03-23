@@ -1,4 +1,4 @@
-goal_id,type,amount,description,date
+goal_id,type,amount,note,date
 1,deposit,15,Allowance,2025-09-04
 1,deposit,10,Weekly save,2025-09-07
 1,deposit,18,Chores,2025-09-10

@@ -6,19 +6,34 @@ from dotenv import load_dotenv
 from pathlib import Path
 import pandas as pd
 
+import json
+
+from dotenv import load_dotenv
+from pathlib import Path
+import pandas as pd
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from mistralai import Mistral
+from mistralai.client import Mistral
 from tavily import TavilyClient
 from pydantic import BaseModel
 from pydantic import Field
 
+load_dotenv()
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
 ROOT_PATH = Path(__file__).parent.parent
+
+# =================================== APP SETUP ===================================
+# 1. User dict
+# 2. Counters to goals and transactions
+# 3. Initial app goals
+# 4. Building initial transactions
+# 5. Helper functions for finding a adding a new transaction and finding a goal, 
+# =================================================================================
 
 # =================================== APP SETUP ===================================
 # 1. User dict
@@ -42,6 +57,7 @@ goals = [
         "title": "Wireless headphones",
         "target_amount": 250,
         "target_amount_reasoning": "Target estimate provided by user.",
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 250,
         "emoji": "🎧",
         "image_url": "",
@@ -51,6 +67,7 @@ goals = [
         "id": 2,
         "title": "New sneakers",
         "target_amount": 175,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 175,
         "emoji": "👟",
@@ -62,6 +79,7 @@ goals = [
         "title": "Cinema trip",
         "target_amount": 140,
         "target_amount_reasoning": "Target estimate provided by user.",
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 140,
         "emoji": "🍿",
         "image_url": "",
@@ -71,6 +89,7 @@ goals = [
         "id": 4,
         "title": "New sneakers",
         "target_amount": 200,
+        "target_amount_reasoning": "Target estimate provided by user.",
         "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 35,
         "emoji": "\ud83d\udc5f",
@@ -82,6 +101,7 @@ goals = [
         "title": "Art set",
         "target_amount": 80,
         "target_amount_reasoning": "Target estimate provided by user.",
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 22,
         "emoji": "\ud83c\udfa8",
         "image_url": "",
@@ -92,6 +112,7 @@ goals = [
         "title": "Concert ticket",
         "target_amount": 120,
         "target_amount_reasoning": "Target estimate provided by user.",
+        "target_amount_reasoning": "Target estimate provided by user.",
         "saved_amount": 40,
         "emoji": "\ud83c\udfb6",
         "image_url": "",
@@ -99,6 +120,7 @@ goals = [
     },
 ]
 
+# Empty list of transactions
 # Empty list of transactions
 transactions = []
 
@@ -338,6 +360,7 @@ def estimate_price(user_input: str, system_prompt:str, model: str = "mistral-med
 @app.get("/api/user")
 def get_user():
     # Returns the demo user data as JSON to follow API convensions (basically enables communication between frontend and backend)
+    # Returns the demo user data as JSON to follow API convensions (basically enables communication between frontend and backend)
     return jsonify(user)
 
 
@@ -378,6 +401,12 @@ def create_goal():
     new_goal = {
         "id": next_goal_id,
         "title": title,
+        "target_amount": target_amount,
+        "target_amount_reasoning": target_amount_reasoning,
+        "saved_amount": 0,
+        "emoji": emoji,
+        "image_url": image_url,
+        "status": "active",
         "target_amount": target_amount,
         "target_amount_reasoning": target_amount_reasoning,
         "saved_amount": 0,
@@ -427,6 +456,8 @@ def move_funds(goal_id):
     data = request.get_json(force=True)
     amount = float(data.get("amount", 0))
     target_goal_id = int(data.get("target_goal_id", 0))
+    amount = float(data.get("amount", 0))
+    target_goal_id = int(data.get("target_goal_id", 0))
 
     source_goal = _find_goal(goal_id) #the goal we are moving funds from
     target_goal = _find_goal(target_goal_id) #the goal we are moving funds to
@@ -445,6 +476,7 @@ def move_funds(goal_id):
 @app.post("/api/goals/<int:goal_id>/close")
 def close_goal(goal_id):
     data = request.get_json(force=True)
+    target_goal_id = int(data.get("target_goal_id", 0))
     target_goal_id = int(data.get("target_goal_id", 0))
 
     goal_to_be_closed = _find_goal(goal_id) 
@@ -476,7 +508,12 @@ def complete_goal(goal_id):
     if not goal:
         return jsonify({"error": "Goal not found."}), 404
 
+    goal = _find_goal(goal_id)
+    if not goal:
+        return jsonify({"error": "Goal not found."}), 404
+
     goal["status"] = "archived"
+    _add_transaction(goal_id, "complete", goal['target_amount'], note=f"Goal {goal['title']} completed")
     _add_transaction(goal_id, "complete", goal['target_amount'], note=f"Goal {goal['title']} completed")
     return jsonify(goal)
 
@@ -495,6 +532,7 @@ def get_summary():
 
     month_totals = {}
     for transaction in transactions:
+        month = transaction["date"][0:7] # There are 7 characters because the format is:'YYYY-MM'
         month = transaction["date"][0:7] # There are 7 characters because the format is:'YYYY-MM'
         if month not in month_totals:
             month_totals[month] = {"month": month, "in": 0, "out": 0}
