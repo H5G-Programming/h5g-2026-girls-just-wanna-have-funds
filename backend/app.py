@@ -61,7 +61,8 @@ goals = [
         "saved_amount": 250,
         "emoji": "🎧",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 0,
     },
     {
         "id": 2,
@@ -72,7 +73,8 @@ goals = [
         "saved_amount": 175,
         "emoji": "👟",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 1,
     },
     {
         "id": 3,
@@ -83,7 +85,8 @@ goals = [
         "saved_amount": 140,
         "emoji": "🍿",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 2,
     },
     {
         "id": 4,
@@ -95,6 +98,7 @@ goals = [
         "emoji": "\ud83d\udc5f",
         "image_url": "",
         "status": "active",
+        "priority": 3,
     },
     {
         "id": 5,
@@ -106,6 +110,7 @@ goals = [
         "emoji": "\ud83c\udfa8",
         "image_url": "",
         "status": "active",
+        "priority": 4,
     },
     {
         "id": 6,
@@ -117,6 +122,7 @@ goals = [
         "emoji": "\ud83c\udfb6",
         "image_url": "",
         "status": "active",
+        "priority": 5,
     },
 ]
 
@@ -362,7 +368,8 @@ def get_user():
 
 @app.get("/api/goals")
 def get_goals():
-    return jsonify(goals)
+    sorted_goals = sorted(goals, key=lambda goal: goal["priority"])
+    return jsonify(sorted_goals)
 
 
 @app.get("/api/transactions")
@@ -372,6 +379,21 @@ def get_transactions():
     return jsonify(sorted_transactions)
 
 
+def pick_emoji(title):
+    title_lower = title.lower()
+
+    if "shoe" in title_lower or "sneaker" in title_lower:
+        return "👟"
+    elif "music" in title_lower or "concert" in title_lower:
+        return "🎵"
+    elif "food" in title_lower or "pizza" in title_lower:
+        return "🍕"
+    elif "phone" in title_lower:
+        return "📱"
+    elif "game" in title_lower:
+        return "🎮"
+    else:
+        return "\ud83d\udc9c"
 @app.get("/api/transactions")
 def get_transactions():
     #sorted is a keyword that sorts a list based on a key provided, here we sort by date in descending order
@@ -387,10 +409,11 @@ def create_goal():
     target_amount = data.get("target_amount") #.get() gives default value 0 if target_amount is not found
     if target_amount is not None:
         target_amount = float(target_amount)
+
     target_amount = data.get("target_amount") #.get() gives default value 0 if target_amount is not found
     if target_amount is not None:
         target_amount = float(target_amount)
-    emoji = data.get("emoji", "\ud83d\udc9c")
+    emoji = data.get("emoji") or pick_emoji(title)
     image_url = data.get("image_url", "")
     target_amount_reasoning = "Target estimate provided by user."
 
@@ -413,6 +436,7 @@ def create_goal():
         "emoji": emoji,
         "image_url": image_url,
         "status": "active",
+        "priority": len(goals),
     }
     next_goal_id = next_goal_id + 1
     
@@ -514,11 +538,14 @@ def get_summary():
     total_saved = sum(goal["saved_amount"] for goal in active_goals)
 
     closest_goal = None
-    if active_goals:
-        closest_goal = max(
-            active_goals,
-            key=lambda goal: goal["saved_amount"] / goal["target_amount"],
-        )
+    best_percentage = 0
+
+    for i in range(len(active_goals)):
+        goal = active_goals[i]
+        percentage = goal["saved_amount"] / goal["target_amount"]
+        if percentage > best_percentage:
+            best_percentage = percentage
+            closest_goal = goal
 
     month_totals = {}
     for transaction in transactions:
@@ -559,6 +586,18 @@ def number_of_days_until_goal():
         "predicted_days": predicted_days
     })
 
+
+@app.post("/api/goals/reorder")
+def reorder_goals():
+    data = request.get_json(force=True)
+    new_order = data["goal_ids"]
+
+    for i in range(len(new_order)):
+        goal_id = new_order[i]
+        goal = _find_goal(goal_id)
+        goal["priority"] = i
+
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":

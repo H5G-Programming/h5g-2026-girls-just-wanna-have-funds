@@ -61,7 +61,8 @@ goals = [
         "saved_amount": 250,
         "emoji": "🎧",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 0,
     },
     {
         "id": 2,
@@ -72,7 +73,8 @@ goals = [
         "saved_amount": 175,
         "emoji": "👟",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 1,
     },
     {
         "id": 3,
@@ -83,7 +85,8 @@ goals = [
         "saved_amount": 140,
         "emoji": "🍿",
         "image_url": "",
-        "status": "closed"
+        "status": "closed",
+        "priority": 2,
     },
     {
         "id": 4,
@@ -95,6 +98,7 @@ goals = [
         "emoji": "\ud83d\udc5f",
         "image_url": "",
         "status": "active",
+        "priority": 3,
     },
     {
         "id": 5,
@@ -106,6 +110,7 @@ goals = [
         "emoji": "\ud83c\udfa8",
         "image_url": "",
         "status": "active",
+        "priority": 4,
     },
     {
         "id": 6,
@@ -117,6 +122,7 @@ goals = [
         "emoji": "\ud83c\udfb6",
         "image_url": "",
         "status": "active",
+        "priority": 5,
     },
 ]
 
@@ -366,7 +372,8 @@ def get_user():
 
 @app.get("/api/goals")
 def get_goals():
-    return jsonify(goals)
+    sorted_goals = sorted(goals, key=lambda goal: goal["priority"])
+    return jsonify(sorted_goals)
 
 
 @app.get("/api/transactions")
@@ -374,6 +381,30 @@ def get_transactions():
     #sorted is a keyword that sorts a list based on a key provided, here we sort by date in descending order
     sorted_transactions = sorted(transactions, key=lambda item: item["date"], reverse=True)
     return jsonify(sorted_transactions)
+
+
+# =============================================
+# EXERCISE 8: Smart emoji picker!
+# =============================================
+# Write a function that picks a default emoji
+# based on keywords in the goal title.
+#
+# Use .lower() to make the matching case-insensitive,
+# then use the "in" keyword to check if a word
+# appears inside the title string.
+#
+# Example: if "shoe" in title_lower → return "👟"
+
+def pick_emoji(title):
+    title_lower = title.lower()
+
+    if "shoe" in title_lower or "sneaker" in title_lower:
+        return "👟"
+    # YOUR CODE HERE (add 3 more elif checks + an else)
+    # Ideas: "music"/"concert" → "🎵", "food"/"pizza" → "🍕",
+    #        "phone" → "📱", "game" → "🎮"
+    # Don't forget the else that returns "💜"!
+    return "\ud83d\udc9c"  # default until you add your own elifs above
 
 
 @app.post("/api/goals")
@@ -384,7 +415,8 @@ def create_goal():
     target_amount = data.get("target_amount") #.get() gives default value 0 if target_amount is not found
     if target_amount is not None:
         target_amount = float(target_amount)
-    emoji = data.get("emoji", "\ud83d\udc9c")
+    # EXERCISE 8: Change the line below to use pick_emoji(title) as the default!
+    emoji = data.get("emoji") or pick_emoji(title)
     image_url = data.get("image_url", "")
     target_amount_reasoning = "Target estimate provided by user."
 
@@ -407,15 +439,10 @@ def create_goal():
         "emoji": emoji,
         "image_url": image_url,
         "status": "active",
-        "target_amount": target_amount,
-        "target_amount_reasoning": target_amount_reasoning,
-        "saved_amount": 0,
-        "emoji": emoji,
-        "image_url": image_url,
-        "status": "active",
+        "priority": len(goals),
     }
     next_goal_id = next_goal_id + 1
-    
+
     # TODO: Lesson 2 Exercise - Add the new goal dictionary to the list of existing goals
     goals.append(new_goal)
     return jsonify(new_goal), 201
@@ -523,12 +550,24 @@ def get_summary():
     active_goals = [goal for goal in goals if goal["status"] == "active"]
     total_saved = sum(goal["saved_amount"] for goal in active_goals)
 
+    # =============================================
+    # EXERCISE 7: Find your closest goal!
+    # =============================================
+    # Which goal are you closest to reaching?
+    # Loop through active_goals and find the one with
+    # the highest percentage (saved_amount / target_amount).
+    #
+    # This is the "best so far" pattern:
+    #   1. Start with best_percentage = 0
+    #   2. Loop through each goal with range(len(...))
+    #   3. Calculate the percentage for each goal
+    #   4. If it's better than best_percentage, update both
+    #      best_percentage and closest_goal
+
     closest_goal = None
-    if active_goals:
-        closest_goal = max(
-            active_goals,
-            key=lambda goal: goal["saved_amount"] / goal["target_amount"],
-        )
+    best_percentage = 0
+
+    # YOUR CODE HERE (6 lines)
 
     month_totals = {}
     for transaction in transactions:
@@ -566,6 +605,41 @@ def number_of_days_until_goal():
     return jsonify({
         "predicted_days": predicted_days
     })
+
+
+@app.post("/api/goals/reorder")
+def reorder_goals():
+    data = request.get_json(force=True)
+    new_order = data["goal_ids"]
+
+    # =============================================
+    # EXERCISE 6: Prioritize your goals!
+    # =============================================
+    # The frontend sent a list of goal IDs in the new order.
+    # Example: new_order = [3, 1, 2]
+    #   → goal 3 should be priority 0 (first)
+    #   → goal 1 should be priority 1 (second)
+    #   → goal 2 should be priority 2 (third)
+    #
+    # Understanding range(len(...)):
+    #   new_order is a list, e.g. [3, 1, 2]
+    #   len(new_order) gives us how many items are in the list → 3
+    #   range(3) gives us the numbers 0, 1, 2 (it always starts at 0!)
+    #   So range(len(new_order)) gives us one number per item — perfect for positions!
+    #
+    #   Inside the loop, i is the position number, and new_order[i] is the goal ID at that position.
+    #
+    # Write a for-loop: for i in range(len(new_order)):
+    #
+    # Inside the loop, for each position i:
+    #   1. Get the goal_id from new_order[i]
+    #   2. Use _find_goal(goal_id) to look up the goal dictionary
+    #   3. Set goal["priority"] to i (the position number)
+
+    # YOUR CODE HERE (4 lines)
+
+
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":

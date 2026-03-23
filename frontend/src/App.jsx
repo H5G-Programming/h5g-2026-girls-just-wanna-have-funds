@@ -60,6 +60,8 @@ export default function App() {
   const [moveInputs, setMoveInputs] = useState({});
   const [closeTargets, setCloseTargets] = useState({});
   const [activeModal, setActiveModal] = useState(null);
+  const [draggedGoalId, setDraggedGoalId] = useState(null);
+  const [dragOverGoalId, setDragOverGoalId] = useState(null);
   const celebratedGoals = useRef(new Set());
   const hasLoaded = useRef(false);
   const tips = [
@@ -222,6 +224,54 @@ export default function App() {
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const handleDragStart = (event, goalId) => {
+    setDraggedGoalId(goalId);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (event, goalId) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    if (goalId !== dragOverGoalId) {
+      setDragOverGoalId(goalId);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverGoalId(null);
+  };
+
+  const handleDrop = async (event, targetGoalId) => {
+    event.preventDefault();
+    if (draggedGoalId == null || draggedGoalId === targetGoalId) {
+      setDraggedGoalId(null);
+      setDragOverGoalId(null);
+      return;
+    }
+
+    // Build new order: take active goals, move dragged to target position
+    const ids = activeGoals.map((g) => g.id);
+    const fromIndex = ids.indexOf(draggedGoalId);
+    const toIndex = ids.indexOf(targetGoalId);
+    ids.splice(fromIndex, 1);
+    ids.splice(toIndex, 0, draggedGoalId);
+
+    setDraggedGoalId(null);
+    setDragOverGoalId(null);
+
+    try {
+      await postJson("/api/goals/reorder", { goal_ids: ids });
+      refreshAll();
+    } catch (err) {
+      refreshAll(); // snap back on failure
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedGoalId(null);
+    setDragOverGoalId(null);
   };
 
   return (
@@ -473,8 +523,24 @@ export default function App() {
 
             <div className="goal-grid">
               {(activeTab === "active" ? activeGoals : archivedGoals).map((goal) => (
-                <div key={goal.id} className="goal-card">
+                <div
+                  key={goal.id}
+                  className={
+                    "goal-card" +
+                    (draggedGoalId === goal.id ? " dragging" : "") +
+                    (dragOverGoalId === goal.id && draggedGoalId !== goal.id ? " drag-over" : "")
+                  }
+                  draggable={activeTab === "active"}
+                  onDragStart={activeTab === "active" ? (e) => handleDragStart(e, goal.id) : undefined}
+                  onDragOver={activeTab === "active" ? (e) => handleDragOver(e, goal.id) : undefined}
+                  onDragLeave={activeTab === "active" ? handleDragLeave : undefined}
+                  onDrop={activeTab === "active" ? (e) => handleDrop(e, goal.id) : undefined}
+                  onDragEnd={activeTab === "active" ? handleDragEnd : undefined}
+                >
                   <div className="goal-header">
+                    {activeTab === "active" && (
+                      <span className="drag-handle" title="Drag to reorder">⠿</span>
+                    )}
                     <div className="goal-avatar">
                       {goal.image_url ? (
                         <img src={goal.image_url} alt={goal.title} />
