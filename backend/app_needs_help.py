@@ -360,6 +360,30 @@ def get_transactions():
     return jsonify(sorted_transactions)
 
 
+# =============================================
+# EXERCISE 8: Smart emoji picker!
+# =============================================
+# Write a function that picks a default emoji
+# based on keywords in the goal title.
+#
+# Use .lower() to make the matching case-insensitive,
+# then use the "in" keyword to check if a word
+# appears inside the title string.
+#
+# Example: if "shoe" in title_lower → return "👟"
+
+def pick_emoji(title):
+    title_lower = title.lower()
+
+    if "shoe" in title_lower or "sneaker" in title_lower:
+        return "👟"
+    # YOUR CODE HERE (add 3 more elif checks + an else)
+    # Ideas: "music"/"concert" → "🎵", "food"/"pizza" → "🍕",
+    #        "phone" → "📱", "game" → "🎮"
+    # Don't forget the else that returns "💜"!
+    return "\ud83d\udc9c"  # default until you add your own elifs above
+
+
 @app.post("/api/goals")
 def create_goal():
     global next_goal_id
@@ -368,7 +392,8 @@ def create_goal():
     target_amount = data.get("target_amount") #.get() gives default value 0 if target_amount is not found
     if target_amount is not None:
         target_amount = float(target_amount)
-    emoji = data.get("emoji", "\ud83d\udc9c")
+    # EXERCISE 8: Change the line below to use pick_emoji(title) as the default!
+    emoji = data.get("emoji") or pick_emoji(title)
     image_url = data.get("image_url", "")
     target_amount_reasoning = "Target estimate provided by user."
 
@@ -494,12 +519,24 @@ def get_summary():
     active_goals = [goal for goal in goals if goal["status"] == "active"]
     total_saved = sum(goal["saved_amount"] for goal in active_goals)
 
+    # =============================================
+    # EXERCISE 7: Find your closest goal!
+    # =============================================
+    # Which goal are you closest to reaching?
+    # Loop through active_goals and find the one with
+    # the highest percentage (saved_amount / target_amount).
+    #
+    # This is the "best so far" pattern:
+    #   1. Start with best_percentage = 0
+    #   2. Loop through each goal with range(len(...))
+    #   3. Calculate the percentage for each goal
+    #   4. If it's better than best_percentage, update both
+    #      best_percentage and closest_goal
+
     closest_goal = None
-    if active_goals:
-        closest_goal = max(
-            active_goals,
-            key=lambda goal: goal["saved_amount"] / goal["target_amount"],
-        )
+    best_percentage = 0
+
+    # YOUR CODE HERE (6 lines)
 
     month_totals = {}
     for transaction in transactions:

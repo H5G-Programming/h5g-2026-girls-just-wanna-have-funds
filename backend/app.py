@@ -358,6 +358,23 @@ def get_transactions():
     return jsonify(sorted_transactions)
 
 
+def pick_emoji(title):
+    title_lower = title.lower()
+
+    if "shoe" in title_lower or "sneaker" in title_lower:
+        return "👟"
+    elif "music" in title_lower or "concert" in title_lower:
+        return "🎵"
+    elif "food" in title_lower or "pizza" in title_lower:
+        return "🍕"
+    elif "phone" in title_lower:
+        return "📱"
+    elif "game" in title_lower:
+        return "🎮"
+    else:
+        return "\ud83d\udc9c"
+
+
 @app.post("/api/goals")
 def create_goal():
     global next_goal_id
@@ -366,7 +383,7 @@ def create_goal():
     target_amount = data.get("target_amount") #.get() gives default value 0 if target_amount is not found
     if target_amount is not None:
         target_amount = float(target_amount)
-    emoji = data.get("emoji", "\ud83d\udc9c")
+    emoji = data.get("emoji") or pick_emoji(title)
     image_url = data.get("image_url", "")
     target_amount_reasoning = "Target estimate provided by user."
 
@@ -493,11 +510,14 @@ def get_summary():
     total_saved = sum(goal["saved_amount"] for goal in active_goals)
 
     closest_goal = None
-    if active_goals:
-        closest_goal = max(
-            active_goals,
-            key=lambda goal: goal["saved_amount"] / goal["target_amount"],
-        )
+    best_percentage = 0
+
+    for i in range(len(active_goals)):
+        goal = active_goals[i]
+        percentage = goal["saved_amount"] / goal["target_amount"]
+        if percentage > best_percentage:
+            best_percentage = percentage
+            closest_goal = goal
 
     month_totals = {}
     for transaction in transactions:
