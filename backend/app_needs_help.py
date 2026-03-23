@@ -272,23 +272,23 @@ class Output(BaseModel):
     )
 
 # Estimating price with LLM if not provided
-def estimate_price(user_input: str, system_prompt:str, model: str = "mistral-medium-latest", temperature: float = 0, return_all_messages: bool = True) -> dict:
+def estimate_price(user_input: str, system_prompt:str, model: str = "mistral-medium-latest", temperature: float = 0, return_all_messages: bool = False) -> dict:
     """Use an LLM to search the internet and estimate an appropriate price for a goal."""
     # 2. Create chat client
-    client = ___
+    client = Mistral(api_key=os.getenv('MISTRAL_KEY'))
 
     # 3. Define messages
     messages = [
-    {___},
-    {___},
+    {"role": "system", "content": system_prompt},
+    {"role": "user", "content": user_input},
     ]
 
     # 4. Call LLM to get search result
     chat_response = client.chat.complete(
         model=model,
-        messages = ___,
-        tools = ___,
-        temperature=___
+        messages = messages,
+        tools = LLM_TOOLS,
+        temperature=temperature
     )
     messages.append(chat_response.choices[0].message)
     
@@ -297,12 +297,12 @@ def estimate_price(user_input: str, system_prompt:str, model: str = "mistral-med
         for tool_call in messages[-1].tool_calls:
             args = tool_call.function.arguments
             if tool_call.function.name == 'search_tavily':
-                web_results = ___
+                web_results = search_tavily(**json.loads(args))
                 tool_result = "\n\n".join(f"{r['title']}\n{r['content']}" for r in web_results)
                 messages.append({
                     "role":"tool",
                     "name":tool_call.function.name,
-                    "content": ___,
+                    "content": tool_result,
                     "tool_call_id":tool_call.id
                 })
     else:
@@ -311,12 +311,12 @@ def estimate_price(user_input: str, system_prompt:str, model: str = "mistral-med
     # 6. Get structured response from LLM
     chat_response = client.chat.parse(
         model=model,
-        messages = ___,
-        tools = ___,
-        response_format=___
+        messages = messages,
+        tools = LLM_TOOLS,
+        response_format=Output
     )
 
-    messages.append(chat_response.choices[0].messages)
+    messages.append(chat_response.choices[0].message)
     structured_output = json.loads(chat_response.choices[0].message.content)
 
     if return_all_messages:
